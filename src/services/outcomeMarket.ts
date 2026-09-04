@@ -36,7 +36,7 @@ export interface ExecutionQuote {
 export interface OutcomeMarketState {
   status: OutcomeMarketStatus
   roundSlug: string
-  source: 'study'
+  source: 'polymarket' | 'local'
   lockedForRound: boolean
   displayPrices: Record<OutcomeSide, number | null>
   books: Record<OutcomeSide, OutcomeOrderBook | null>
@@ -102,6 +102,53 @@ const isValidSize = (value: number) => Number.isFinite(value) && value >= 0
 const parseFiniteNumber = (value: unknown) => {
   const parsed = typeof value === 'number' ? value : Number(value)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+export const parseGammaStringList = (value: unknown): string[] | null => {
+  if (Array.isArray(value)) {
+    return value.every((item) => typeof item === 'string')
+      ? value
+      : null
+  }
+
+  if (typeof value !== 'string') return null
+
+  try {
+    const parsed = JSON.parse(value) as unknown
+    return Array.isArray(parsed)
+      && parsed.every((item) => typeof item === 'string')
+      ? parsed
+      : null
+  } catch {
+    return null
+  }
+}
+
+export const mapOutcomeTokens = (
+  outcomesValue: unknown,
+  tokenIdsValue: unknown,
+): Record<OutcomeSide, string> | null => {
+  const outcomes = parseGammaStringList(outcomesValue)
+  const tokenIds = parseGammaStringList(tokenIdsValue)
+
+  if (!outcomes || !tokenIds || outcomes.length !== tokenIds.length) {
+    return null
+  }
+
+  const mapped: Partial<Record<OutcomeSide, string>> = {}
+
+  outcomes.forEach((outcome, index) => {
+    const normalizedOutcome = outcome.trim().toLowerCase()
+    const tokenId = tokenIds[index]?.trim()
+    if (!tokenId) return
+
+    if (normalizedOutcome === 'up') mapped.up = tokenId
+    if (normalizedOutcome === 'down') mapped.down = tokenId
+  })
+
+  return mapped.up && mapped.down
+    ? { up: mapped.up, down: mapped.down }
+    : null
 }
 
 export const createMutableOrderBook = (): MutableOrderBook => ({

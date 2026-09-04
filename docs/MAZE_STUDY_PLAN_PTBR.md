@@ -5,6 +5,10 @@ espanhol do México acontece depois da aprovação deste conteúdo. A interface 
 protótipo já está em espanhol; apenas este plano e as perguntas do Maze estão em
 português nesta etapa.
 
+> O ambiente do estudo ainda não existe. Este documento é o conteúdo aprovado
+> das perguntas; os requisitos técnicos das URLs estão em
+> [MAZE_SETUP.md](MAZE_SETUP.md).
+
 ## Objetivo
 
 Entender se usuários da Draftea conseguem compreender e utilizar o Pulse sem
@@ -249,45 +253,54 @@ Agradecemos pelo seu tempo e pela contribuição.
 
 ---
 
-## Nota de revisão: por que as perguntas não citam valores
+## Notas de revisão
 
-O mercado do protótipo se move. O preço do Bitcoin caminha durante a missão e
-UP e DOWN acompanham, em degraus de um ponto percentual, como no produto real.
-A caminhada é determinística — é função do tempo decorrido desde a abertura da
-tarefa, então é o mesmo filme para todo participante —, mas cada pessoa age num
-instante diferente e portanto compra a um preço diferente.
+### Por que as perguntas da tarefa 2 não citam valores
 
-Na prática: quem confirma a compra com UP em 67% recebe 14,93 participações e vê
-US$14,93 em “Ganancia potencial”; quem confirma com UP em 65% recebe 15,38 e vê
-US$15,38. **Por isso nenhuma pergunta pode citar um valor.**
+Elas foram escritas sem números de propósito, para funcionarem independentemente
+de como o ambiente do estudo for construído.
 
-O que continua fixo e pode ser citado:
+Se o mercado simulado ficar **parado**, todo participante compra ao mesmo preço e
+vê os mesmos US$14,93. Se ele **se mover**, cada pessoa age num instante
+diferente: quem confirma com UP em 67% recebe 14,93 participações e vê US$14,93;
+quem confirma com UP em 65% recebe 15,38 e vê US$15,38. Nesse caso, uma pergunta
+que cite um valor fica errada para parte da amostra.
+
+Como a decisão entre as duas coisas ainda não foi tomada, as perguntas medem a
+**relação** entre os números — se a pessoa entende que o valor mostrado inclui o
+monto usado — e não o número em si. Isso vale nos dois cenários. Se a escolha for
+por um mercado parado, dá para voltar a citar US$14,93 e US$4,93 e ganhar
+precisão; o registro fica aqui para essa decisão ser consciente.
+
+Independentemente disso, três coisas são fixas por construção e podem ser
+citadas com segurança:
 
 - O **monto usado** é sempre US$10, então o saldo depois da compra é sempre
   US$2.030,00.
 - O **exemplo do onboarding** é ilustração estática, não dado de mercado: o card
   do terceiro passo mostra sempre US$10, 67¢, 14,93 participações, US$14,93 e
   +US$4,93. As perguntas da tarefa 1 se apoiam nele com segurança.
-- A **abertura de qualquer tarefa** mostra sempre UP em 67% e DOWN em 33%. O que
-  varia é o que acontece depois.
+- A **abertura de qualquer tarefa** deve mostrar UP em 67% e DOWN em 33%.
 
-O que se perde: não dá mais para comparar entre participantes se alguém “acertou
-US$14,93”. A compreensão passa a ser medida pela relação entre os números — se a
-pessoa entende que o valor mostrado inclui o monto usado —, e não pelo número em
-si. É por isso que a pergunta opcional virou uma pergunta de inclusão, e não de
-aritmética.
+### O rótulo `Ganancia potencial`
 
-O que se ganha: a tarefa 3 fica melhor sustentada. A pergunta “o que determina
-quanto você recebe ao vender antes do final da rodada” tem como resposta correta
-“o valor das minhas participações naquele momento” — e agora esse valor
-visivelmente muda na tela enquanto a pessoa decide, em vez de ficar parado
-contradizendo a alternativa certa.
+O betslip do Pulse mostra um único número sob esse rótulo, e esse número é o
+total recebido, não o ganho. Os dois só aparecem separados no onboarding.
 
-Permanece em aberto um ponto de conteúdo do produto: o betslip mostra um único
-número sob o rótulo `Ganancia potencial`, e esse número é o total recebido, não o
-ganho. Os dois só aparecem separados no onboarding. A tela foi mantida como está
-porque o rótulo é conteúdo aprovado e a ambiguidade é justamente o que a pergunta
-mede — corrigi-la antes da coleta responderia a pergunta no lugar do
-participante. Na análise, a alternativa 2 é a leitura que o rótulo induz e a 1 é
-a correta; uma taxa alta na 2 é um resultado acionável sobre o rótulo, não
-desatenção do participante.
+A recomendação é **não corrigir a tela antes da coleta**: o rótulo é conteúdo
+aprovado do produto, e a distância entre ele e o número que carrega é exatamente
+a confusão que a pergunta mede. Corrigir antes responderia a pergunta no lugar do
+participante.
+
+Na análise, a alternativa 2 (“meu ganho, sem contar os US$10”) é a leitura que o
+rótulo induz e a alternativa 1 (“o valor total”) é a correta. Uma taxa alta na 2
+não indica desatenção: indica que o rótulo está ensinando a coisa errada, e esse
+é um resultado acionável.
+
+### Um achado que independe do estudo
+
+Perguntas naturais sobre a divergência de preço entre plataformas — a tarefa 4 —
+não chegam ao FAQ `price-difference` quando citam “el precio de bitcoin”. O
+assistente as resolve como consulta ao preço ao vivo e devolve a cotação do
+momento, que é o número que a pessoa já está olhando. **Isso vale como ticket
+para o Pulse principal, independentemente de o estudo acontecer.**

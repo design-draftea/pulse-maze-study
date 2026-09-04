@@ -88,10 +88,6 @@ interface ProfileBottomSheetProps {
   isOpen: boolean
   metrics: ProfileBottomSheetMetrics
   onAssistantNavigate: (action: HelpAssistantActionId) => void
-  /** Chamado quando o assistente entrega uma resposta apoiada numa FAQ. */
-  onAssistantAnswerShown?: (faqId: string) => void
-  /** Chamado em qualquer caminho que chegue ao assistente, inclusive por dentro do sheet. */
-  onAssistantReached?: () => void
   onClose: () => void
 }
 
@@ -311,9 +307,7 @@ export function ProfileBottomSheet({
   initialMode = 'profile',
   isOpen,
   metrics,
-  onAssistantAnswerShown,
   onAssistantNavigate,
-  onAssistantReached,
   onClose,
 }: ProfileBottomSheetProps) {
   const [shouldRender, setShouldRender] = useState(false)
@@ -509,9 +503,8 @@ export function ProfileBottomSheet({
 
   const openHelpAssistant = useCallback(() => {
     setAssistantReturnMode(activeMode === 'profile' ? 'profile' : 'help')
-    onAssistantReached?.()
     goToMode('help-assistant')
-  }, [activeMode, goToMode, onAssistantReached])
+  }, [activeMode, goToMode])
 
   const openHelpParentMode = useCallback(() => {
     goToMode(activeMode === 'help-assistant'
@@ -924,7 +917,6 @@ export function ProfileBottomSheet({
       }}
       getLiveSnapshot={getHelpAssistantSnapshot}
       isActive={activeMode === 'help-assistant'}
-      onAnswerShown={onAssistantAnswerShown}
       onNavigate={navigateFromAssistant}
       onOpenFaq={openHelpQuestion}
       onOpenGlossary={openHelpGlossary}

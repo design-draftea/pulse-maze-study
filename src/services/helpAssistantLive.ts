@@ -392,24 +392,6 @@ const asksForBitcoinPrice = (query: string) => (
   ])
 )
 
-/**
- * Perguntas sobre a diferença entre o preço do Pulse e o de outro lugar.
- *
- * Sem esta guarda, `¿por qué el precio de bitcoin aquí es distinto al de otra
- * plataforma?` cai em `asksForBitcoinPrice` e recebe o preço do momento — que é
- * o número que a pessoa já está olhando e não explica nada. A pergunta é sobre
- * a origem da divergência, e essa resposta existe no FAQ `price-difference`;
- * declinar aqui deixa o conteúdo curado responder.
- */
-export const asksAboutPriceDiscrepancy = (query: string) => (
-  matches(query, [
-    /\b(?:diferente|distinto|distinta|diferencia|no coincide|no es igual|no cuadra|varia)\b/,
-  ])
-  && matches(query, [
-    /\b(?:plataforma|plataformas|app|aplicacion|exchange|sitio|pagina|lugar|binance|bitso|broker)\b/,
-  ])
-)
-
 // ---------------------------------------------------------------------------
 // Respostas
 // ---------------------------------------------------------------------------

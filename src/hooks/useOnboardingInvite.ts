@@ -1,27 +1,55 @@
 import { useCallback, useState } from 'react'
-import { STUDY_STORAGE_KEYS, writeStudyJson } from '../study/studyStorage.ts'
-import type { StudyScenario } from '../study/studyTypes.ts'
+
+const ONBOARDING_INVITE_STORAGE_KEY = 'pulse.onboarding.invite.dismissed'
+
+const markInviteDismissed = () => {
+  try {
+    window.localStorage.setItem(ONBOARDING_INVITE_STORAGE_KEY, '1')
+  } catch {
+    // Persistence is best-effort; the invite still stops pulsing in memory.
+  }
+}
+
+const loadInviteDismissed = () => {
+  const url = new URL(window.location.href)
+
+  // O protótipo roda em testes com usuários, então vários testadores dividem o
+  // mesmo aparelho. Sem um reset explícito, só o primeiro deles veria o
+  // convite. Mesmo contrato do `?resetWallet=1` em `usePrototypeWallet`.
+  if (url.searchParams.get('resetOnboarding') === '1') {
+    try {
+      window.localStorage.removeItem(ONBOARDING_INVITE_STORAGE_KEY)
+    } catch {
+      // O convite volta a pulsar em memória mesmo sem storage disponível.
+    }
+
+    url.searchParams.delete('resetOnboarding')
+    window.history.replaceState(window.history.state, '', url)
+    return false
+  }
+
+  try {
+    return window.localStorage.getItem(ONBOARDING_INVITE_STORAGE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
 
 /**
  * O pulsante atrás do botão de onboarding existe só para o botão ser
- * encontrado. Ele morre na primeira abertura do bottom sheet e não volta mais.
- *
- * No estudo, quem decide se ele aparece é o cenário da tarefa, não o histórico
- * do aparelho: `task=onboarding` precisa do convite pulsando para medir se a
- * pessoa o encontra, e as outras três tarefas precisam dele oculto para não
- * competir com a missão. A persistência serve apenas para um reload no meio da
- * missão não trazer o convite de volta.
+ * encontrado. Ele morre na primeira abertura do bottom sheet — abrir já provou
+ * que a pessoa achou o botão — e não volta mais. O botão em si permanece.
  */
-export function useOnboardingInvite(scenario: StudyScenario) {
-  const [isDismissed, setIsDismissed] = useState(
-    () => scenario.onboarding.completed,
-  )
+export function useOnboardingInvite() {
+  const [isDismissed, setIsDismissed] = useState(loadInviteDismissed)
 
   const dismissInvite = useCallback(() => {
     setIsDismissed((dismissed) => {
-      if (dismissed) return dismissed
+      if (dismissed) {
+        return dismissed
+      }
 
-      writeStudyJson(STUDY_STORAGE_KEYS.onboarding, { completed: true })
+      markInviteDismissed()
       return true
     })
   }, [])

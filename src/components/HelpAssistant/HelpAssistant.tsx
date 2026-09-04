@@ -53,12 +53,6 @@ interface HelpAssistantProps {
    */
   getLiveSnapshot?: () => HelpAssistantLiveSnapshot
   isActive: boolean
-  /**
-   * Avisa qual FAQ sustentou a resposta que acabou de aparecer na conversa. O
-   * marco do estudo depende da resposta renderizada, não do envio: a pessoa só
-   * encontrou o que procurava quando o texto está na tela.
-   */
-  onAnswerShown?: (faqId: string) => void
   onNavigate: (action: HelpAssistantActionId) => void
   onOpenFaq: (id: string) => void
   onOpenGlossary: () => void
@@ -68,7 +62,6 @@ export function HelpAssistant({
   context,
   getLiveSnapshot,
   isActive,
-  onAnswerShown,
   onNavigate,
   onOpenFaq,
   onOpenGlossary,
@@ -175,10 +168,8 @@ export function HelpAssistant({
           : message
       )))
       setIsResponding(false)
-
-      if (result.source?.type === 'faq') onAnswerShown?.(result.source.id)
     }, RESPONSE_DELAY_MS)
-  }, [context, getLiveSnapshot, onAnswerShown])
+  }, [context, getLiveSnapshot])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -334,10 +325,6 @@ export function HelpAssistant({
           maxLength={180}
           placeholder="Escribe tu pregunta"
           autoComplete="off"
-          // A entrada livre carrega o que a pessoa digitou. O Maze mascara o
-          // conteúdo na gravação, então a análise vê que houve uma pergunta sem
-          // guardar o texto dela.
-          data-maze-mask="True"
           enterKeyHint="send"
           onChange={(event) => setInputValue(event.target.value)}
           onFocus={handleFocus}

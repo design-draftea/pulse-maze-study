@@ -4,84 +4,54 @@
 
 - Atualizado em: 2026-09-04
 - Agente que entrega: Claude
-- Agente esperado a seguir: a pessoa usuária, para autorizar merge, deploy e tag
-- Status: implementação, testes e Pull Request concluídos. **Merge, deploy e tag aguardam autorização explícita.**
-- Objetivo: criar a cópia de pesquisa `pulse-maze-study` para o teste não moderado no Maze, com dados simulados e determinísticos
-- Branch: `research/maze-v1`, criada a partir da `main` deste repositório
+- Agente esperado a seguir: a pessoa usuária, para decidir o próximo passo do estudo
+- Status: a implementação exploratória do estudo foi revertida a pedido. A árvore
+  voltou a ser a cópia do `design-draftea/pulse`; ficaram apenas os dois
+  documentos da pesquisa.
+- Branch: `research/maze-v1`
 - Snapshot da fonte: `design-draftea/pulse@a29313075fbafb6d5a1de76e818a1ae780a15acb`
 
-### Validação executada
+### O que existe nesta branch agora
 
-Suítes: 198 casos em 7 arquivos, todos passando. `pnpm lint` e `tsc -b` limpos.
-CI do Pull Request verde.
+- [MAZE_STUDY_PLAN_PTBR.md](MAZE_STUDY_PLAN_PTBR.md) — as perguntas do estudo,
+  em português, para revisão interna antes da tradução.
+- [MAZE_SETUP.md](MAZE_SETUP.md) — as quatro URLs, o comportamento que cada uma
+  precisa ter, os marcos de `mazeStep` e as pendências que dependem de
+  terceiros. É especificação, não descrição de algo que funciona.
 
-Auditoria de rede: o bundle publicado não contém nenhum dos endpoints proibidos.
-Numa sessão de navegador que percorreu as quatro tarefas, os únicos recursos
-externos carregados foram a folha de estilo e as fontes do Google Fonts, que já
-faziam parte da identidade visual do Pulse. Nenhuma requisição a serviço de
-mercado.
+Todo o restante é o Pulse do snapshot acima, sem alteração. As suítes originais
+passam, `pnpm lint` e `tsc -b` estão limpos.
 
-Navegador, com o artefato de produção servido localmente:
+### Onde foi parar a implementação
 
-- `task=onboarding` abre com saldo US$2.040,00, sem entradas e com o convite
-  pulsante. O guia marca `onboarding-open`, os quatro passos avançam, o card do
-  terceiro passo mostra US$10, 67¢, US$14,93 e +US$4,93, e só o CTA final marca
-  `onboarding-complete`.
-- `task=buy` marca `buy-betslip-open` ao escolher UP. O betslip mostra Monto
-  US$10,00, Precio promedio 67¢ e US$14,93. O gesto conclui, marca
-  `purchase-complete`, o saldo fecha em US$2.030,00 e a entrada aparece.
-- `task=sell` abre na Home com a posição já aberta. A Navbar leva a
-  `entries-open#entradas`, o card mostra Monto US$10, 67¢ e 14.93 participaciones,
-  o betslip de venda mostra 61¢ e US$9,10, e a confirmação marca
-  `sale-complete#entradas` com saldo US$2.039,10 e a posição encerrada.
-- `task=help` marca `assistant-open` pelo link da Home. A frase livre
-  `el precio de bitcoin aquí es diferente al de otra plataforma` resolve o FAQ
-  `price-difference` e marca `answer-shown`. O campo carrega `data-maze-mask="True"`.
-- Uma URL sem `task` mostra a tela de link inválido, e não a Home.
-- Viewports 320×568, 375×812, 390×844, 430×932 e 499×900: sem overflow
-  horizontal. O aviso `MobileOnly` continua oculto em 499px e aparece em 520px.
-- Nenhum erro ou aviso no console em nenhuma das tarefas.
-- O armazenamento ficou restrito a `pulse.maze.v1.market`, `.task`, `.onboarding`
-  e `.wallet`.
+A versão exploratória — camada `src/study/`, cenários determinísticos, relógio
+virtual, mercado simulado, instrumentação de URL e seis suítes de teste — está
+preservada no histórico desta branch, nos commits `ddafd2d`, `302b51c`, `3e9e87e`,
+`8ed6ddb` e `51ad89d`, e no Pull Request nº 1. Nada se perdeu: recuperar é
+`git revert` do commit de reversão, ou `git checkout <sha> -- src/study`.
 
-Pendente de validação manual: aparelho físico iOS e Android, e o piloto dentro do
-Maze — este último depende do snippet e da URL publicada.
+Os aprendizados dela estão condensados na seção 4 do `MAZE_SETUP.md`, para quem
+for reimplementar não repetir o percurso.
+
+### Achado independente do estudo
+
+Perguntas naturais sobre divergência de preço entre plataformas não chegam ao FAQ
+`price-difference`: o assistente as resolve como consulta ao preço ao vivo. Vale
+um ticket no Pulse principal, independentemente de o estudo acontecer.
 
 ### Pendências que dependem de terceiros
 
-1. **Snippet do Maze** — não fornecido. Toda a instrumentação de URL está pronta
-   e testada; o snippet entra por `maze/snippet.html` ou pela variável de
-   repositório `PULSE_MAZE_SNIPPET`, e só é injetado com `VITE_MAZE_ENABLED=true`.
-2. **DNS de `pulse-maze.draftea.com`** — não configurado. O deploy temporário usa
-   `design-draftea.github.io/pulse-maze-study/`. Procedimento de troca na seção
-   12 de [MAZE_SETUP.md](MAZE_SETUP.md).
-3. **GitHub Pages em repositório privado** — depende do plano da organização. Se
-   não estiver disponível, o artefato é gerado pelo workflow e precisa de
-   hospedagem aprovada. O repositório não deve ser tornado público.
-4. **Proteção da branch `main`** — não configurada; depende de acesso
-   administrativo ao repositório.
-5. **Piloto técnico no Maze** — depende do snippet e da URL publicada. É o passo
-   que valida a detecção de mudança de query parameter (seção 13 de
-   [MAZE_SETUP.md](MAZE_SETUP.md)).
-
-### Decisão aberta para a pessoa usuária
-
-O betslip mostra `US$14.93` sob o rótulo `Ganancia potencial`, que é o valor
-total recebido e não o ganho líquido. Os `US$4,93` só aparecem no exemplo do
-onboarding. A tela foi mantida como está, porque o rótulo é conteúdo aprovado e a
-ambiguidade é exatamente o que a pergunta 2 da tarefa de compra mede. A nota de
-revisão no fim de [MAZE_STUDY_PLAN_PTBR.md](MAZE_STUDY_PLAN_PTBR.md) registra as
-alternativas.
+1. Snippet do Maze — não fornecido.
+2. DNS de `pulse-maze.draftea.com` — não configurado.
+3. Hospedagem — Pages privado exige plano pago; a conta está no gratuito. O
+   repositório não deve ser tornado público como solução de deploy.
+4. Proteção da branch `main` — mesma limitação de plano.
 
 ---
 
-## Histórico anterior a esta cópia
+## Histórico anterior
 
-O restante deste documento é o handoff herdado do Pulse principal no momento do
-snapshot. Ele descreve trabalho concluído naquele repositório e é mantido aqui
-apenas como registro.
-
-## Estado no snapshot
+## Estado no snapshot do Pulse
 
 - Atualizado em: 2026-09-04
 - Agente que entrega: Codex

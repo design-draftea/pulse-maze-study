@@ -1,13 +1,11 @@
-import { STUDY_STORAGE_PREFIX } from '../study/studyConfig.ts'
-import type { OutcomeSide } from './outcomeMarket.ts'
+import type { OutcomeSide } from './outcomeMarket'
 
-/**
- * A carteira da cópia de pesquisa vive sob o prefixo do estudo. As chaves do
- * Pulse principal não são lidas nem apagadas: um participante pode ter o
- * protótipo original aberto no mesmo aparelho, e o estudo não pode corromper o
- * saldo dele nem herdar o dele.
- */
-export const PROTOTYPE_WALLET_STORAGE_KEY = `${STUDY_STORAGE_PREFIX}.wallet`
+export const PROTOTYPE_WALLET_STORAGE_KEY = 'pulse.prototype-wallet.v4'
+export const LEGACY_PROTOTYPE_WALLET_STORAGE_KEYS = [
+  'pulse.prototype-wallet.v1',
+  'pulse.prototype-wallet.v2',
+  'pulse.prototype-wallet.v3',
+] as const
 // A v4 acrescenta participações e saldo resultante a cada movimento. Estados
 // da v3 não têm esses campos e não permitem derivá-los com segurança: duas
 // compras na mesma rodada e lado colapsam numa única entrada liquidada, então

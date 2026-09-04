@@ -47,20 +47,17 @@ import {
 import { SubHeader } from './components/SubHeader/SubHeader'
 import { useAnimatedMarketPrice } from './hooks/useAnimatedMarketPrice'
 import { useDeferredAssetWarmup } from './hooks/useDeferredAssetWarmup'
+import { useResilientBtcMarketRound } from './hooks/useResilientBtcMarketRound'
 import { useMockChartEntries } from './hooks/useMockChartEntries'
 import { useOnboardingInvite } from './hooks/useOnboardingInvite'
+import { useOutcomeMarket } from './hooks/useOutcomeMarket'
 import { usePrototypeWallet } from './hooks/usePrototypeWallet'
 import {
   BTC_DISPLAY_TIME_ZONE,
   BTC_ROUND_DURATION_MS,
+  fetchCompletedBtcRound,
   getBtcRoundSlug,
 } from './services/marketData'
-import { StudyDiagnostics } from './study/StudyDiagnostics.tsx'
-import { STUDY_VERSION } from './study/studyConfig.ts'
-import { useStudyMarketRound } from './study/studyMarketRound.ts'
-import { markMazeStep } from './study/studyMazeNavigation.ts'
-import { useStudyOutcomeMarket } from './study/studyOutcomeMarket.ts'
-import { getStudyResolution } from './study/studyScenarios.ts'
 import {
   getWalletPosition,
   getWalletProfileMetrics,
@@ -73,10 +70,20 @@ import './App.css'
 
 const MARKET_HEADER_COMPACT_SCROLL_Y = 80
 const DEFAULT_CONTENT_BOTTOM_INSET = 114
-// Os atalhos de demonstração e de injeção de falha do Pulse principal não
-// existem aqui. Um participante que caísse num deles veria uma rodada de cinco
-// segundos ou um mercado indisponível, e a sessão entraria na análise como se
-// fosse o comportamento normal do produto.
+// Único atalho de demonstração disponível também em produção. Sem ele, mostrar
+// o momento de vitória exige esperar até 15 minutos e ainda depender de acertar
+// o lado. A rodada de 5 segundos com confetti é impossível de confundir com o
+// comportamento real, ao contrário dos parâmetros de injeção de falha, que
+// degradam os dados de forma invisível e seguem restritos ao desenvolvimento.
+const ROUND_RESULT_PREVIEW_MODE = new URLSearchParams(window.location.search)
+  .get('previewRoundResult') === 'won'
+const MARKET_CHOICE_PREVIEW_MODE = import.meta.env.DEV
+  ? new URLSearchParams(window.location.search).get('previewMarketChoice')
+  : null
+const LOCKED_MARKET_CHOICE_PREVIEW_MODE = MARKET_CHOICE_PREVIEW_MODE === 'locked'
+const LOCKED_BETSLIP_PREVIEW_MODE = MARKET_CHOICE_PREVIEW_MODE === 'betslip-locked'
+const ROUND_RESULT_PREVIEW_SECONDS = 5
+const PENDING_SETTLEMENT_RETRY_MS = 15_000
 const PAGE_TRANSITION_FALLBACK_MS = 700
 const MOVEMENTS_HASH = '#movimientos'
 const ENTRIES_HASH = '#entradas'
@@ -124,13 +131,6 @@ const resetScrollTop = () => {
 function App() {
   useDeferredAssetWarmup()
 
-  const resolution = getStudyResolution()
-  if (resolution.status !== 'ready') {
-    throw new Error('App montado sem um cenário de estudo preparado.')
-  }
-  const { scenario, isDebug } = resolution
-  const studyTask = scenario.task
-
   const [activeSection, setActiveSection] = useState<AppSection>(getAppSection)
   const [pageTransition, setPageTransition] = useState<
     PageTransitionState | null
@@ -142,9 +142,11 @@ function App() {
   const {
     isInviting: isOnboardingInviting,
     dismissInvite: dismissOnboardingInvite,
-  } = useOnboardingInvite(scenario)
+  } = useOnboardingInvite()
   const [profileSheetMode, setProfileSheetMode] = useState<ProfileBottomSheetMode>('profile')
-  const [selectedSide, setSelectedSide] = useState<MarketSide | null>(null)
+  const [selectedSide, setSelectedSide] = useState<MarketSide | null>(
+    LOCKED_BETSLIP_PREVIEW_MODE ? 'up' : null,
+  )
   const [betslipInitialOperationMode, setBetslipInitialOperationMode] = useState<
     BetslipOperationMode
   >('buy')
@@ -155,7 +157,7 @@ function App() {
   const [contentBottomInset, setContentBottomInset] = useState(
     DEFAULT_CONTENT_BOTTOM_INSET,
   )
-  const marketRound = useStudyMarketRound(scenario)
+  const marketRound = useResilientBtcMarketRound()
   const {
     balanceCents,
     currentCostBasis,
@@ -167,11 +169,25 @@ function App() {
     purchase,
     sell,
     settleRound,
+    creditOnce,
   } = usePrototypeWallet(marketRound.roundStart)
-  const outcomeMarket = useStudyOutcomeMarket(
-    marketRound.currentPrice,
-    marketRound.roundSlug,
-  )
+  const outcomeMarket = useOutcomeMarket({
+    roundSlug: marketRound.roundSlug,
+    targetPrice: marketRound.targetPrice,
+    currentPrice: marketRound.currentPrice,
+    remainingSeconds: marketRound.remainingSeconds,
+    hasUserInteraction: selectedSide !== null
+      || currentPosition.up > 0
+      || currentPosition.down > 0,
+  })
+  const betslipMarket = useMemo(() => (
+    LOCKED_BETSLIP_PREVIEW_MODE
+      ? {
+          ...outcomeMarket,
+          displayPrices: { up: null, down: null },
+        }
+      : outcomeMarket
+  ), [outcomeMarket])
   const currentRoundMarketValueCents = useMemo(() => {
     let totalValueCents = 0
 
@@ -198,7 +214,12 @@ function App() {
   const [lastSeenCompletedRoundStart, setLastSeenCompletedRoundStart] = useState<
     number | null
   >(null)
-
+  const [previewRemainingSeconds, setPreviewRemainingSeconds] = useState<
+    number | null
+  >(() => (
+    ROUND_RESULT_PREVIEW_MODE ? ROUND_RESULT_PREVIEW_SECONDS : null
+  ))
+  const [pendingSettlementRetry, setPendingSettlementRetry] = useState(0)
   // A carteira muda no início da confirmação da venda, então a posição zera
   // cerca de 2,3s antes do aviso de sucesso. O card fica retido com este
   // instantâneo até o aviso aparecer, e só então sai animado.
@@ -220,18 +241,15 @@ function App() {
   })
   const animatedMarketPrice = useAnimatedMarketPrice(marketRound.currentPrice)
   const chartEntries = useMockChartEntries(marketRound.currentPrice !== null)
-  // O relógio virtual para aos cinco minutos restantes, então a rodada nunca
-  // entra em fechamento durante uma missão do Maze. O estado continua existindo
-  // porque a interface o consome; ele simplesmente não é alcançado.
-  const isRoundClosing = marketRound.remainingSeconds > 0
-    && marketRound.remainingSeconds <= 5
-  const displayedMinutes = marketRound.minutes
-  const displayedSeconds = marketRound.seconds
+  const isRoundClosing = ROUND_RESULT_PREVIEW_MODE
+    ? previewRemainingSeconds !== null && previewRemainingSeconds > 0
+    : marketRound.remainingSeconds > 0 && marketRound.remainingSeconds <= 5
+  const displayedMinutes = ROUND_RESULT_PREVIEW_MODE ? '00' : marketRound.minutes
+  const displayedSeconds = previewRemainingSeconds === null
+    ? marketRound.seconds
+    : String(previewRemainingSeconds).padStart(2, '0')
 
   const commitSectionChange = useCallback((nextSection: AppSection) => {
-    // A tarefa de venda começa na Home justamente para medir se a pessoa acha
-    // `Entradas` sozinha, então este é o marco que separa procurar de encontrar.
-    if (nextSection === 'entries') markMazeStep(studyTask, 'entries-open')
     activeSectionRef.current = nextSection
     resetScrollTop()
     if (nextSection === 'home') {
@@ -243,11 +261,7 @@ function App() {
     setBetslipInitialOperationMode('buy')
     setPurchaseSuccess(null)
     setContentBottomInset(DEFAULT_CONTENT_BOTTOM_INSET)
-  }, [studyTask])
-
-  useEffect(() => {
-    markMazeStep(studyTask, 'start')
-  }, [studyTask])
+  }, [])
 
   const transitionToSection = useCallback((nextSection: AppSection) => {
     const currentTransition = pageTransitionRef.current
@@ -411,10 +425,44 @@ function App() {
     return () => window.cancelAnimationFrame(closingFrame)
   }, [isRoundClosing])
 
-  // A rodada do estudo nunca vira, então este efeito nunca liquida nada. Ele
-  // permanece porque é o caminho que a interface percorreria no produto, e
-  // removê-lo esconderia a diferença entre a cópia e o Pulse principal.
   useEffect(() => {
+    if (!ROUND_RESULT_PREVIEW_MODE) return undefined
+
+    let remainingSeconds = ROUND_RESULT_PREVIEW_SECONDS
+    const previewTimer = window.setInterval(() => {
+      remainingSeconds -= 1
+      setPreviewRemainingSeconds(remainingSeconds)
+
+      if (remainingSeconds > 0) return
+
+      window.clearInterval(previewTimer)
+      const snapshot = roundSnapshotRef.current
+      const targetPrice = snapshot.targetPrice
+        ?? snapshot.currentPrice
+        ?? 78_942.11
+      const finalPrice = snapshot.currentPrice ?? targetPrice + 9.51
+
+      setLatestCompletedRound({
+        id: getBtcRoundSlug(snapshot.roundStart),
+        roundStart: snapshot.roundStart,
+        roundEnd: snapshot.roundStart + BTC_ROUND_DURATION_MS,
+        targetPrice,
+        finalPrice,
+        result: finalPrice > targetPrice ? 'up' : 'down',
+      })
+      setRoundWin({
+        roundStart: snapshot.roundStart,
+        totalReceived: 149.25,
+      })
+      creditOnce(`preview-win:${snapshot.roundStart}`, 149.25)
+    }, 1_000)
+
+    return () => window.clearInterval(previewTimer)
+  }, [creditOnce])
+
+  useEffect(() => {
+    if (ROUND_RESULT_PREVIEW_MODE) return
+
     const previousRound = roundSnapshotRef.current
 
     if (previousRound.roundStart !== marketRound.roundStart) {
@@ -474,6 +522,78 @@ function App() {
 
   const pendingRoundStartsKey = pendingRoundStarts.join(',')
 
+  useEffect(() => {
+    if (ROUND_RESULT_PREVIEW_MODE || pendingRoundStarts.length === 0) {
+      return undefined
+    }
+
+    const controller = new AbortController()
+    let isActive = true
+
+    void Promise.allSettled(
+      pendingRoundStarts.map((roundStart) => {
+        const cachedRound = marketRound.previousRounds.find(
+          ({ roundStart: completedStart }) => completedStart === roundStart,
+        )
+
+        return cachedRound
+          ? Promise.resolve(cachedRound)
+          : fetchCompletedBtcRound(roundStart, controller.signal)
+      }),
+    ).then((responses) => {
+      if (!isActive) return
+
+      let newestWinningRound: RoundWinDetails | null = null
+
+      responses.forEach((response) => {
+        if (response.status !== 'fulfilled') return
+
+        const completedRound = response.value
+        const settlement = settleRound(
+          completedRound.roundStart,
+          completedRound.result,
+          {
+            roundEnd: completedRound.roundEnd,
+            targetPrice: completedRound.targetPrice,
+            finalPrice: completedRound.finalPrice,
+          },
+        )
+
+        setLatestCompletedRound(completedRound)
+        if (
+          settlement.payoutCents > 0
+          && (
+            newestWinningRound === null
+            || completedRound.roundStart > newestWinningRound.roundStart
+          )
+        ) {
+          newestWinningRound = {
+            roundStart: completedRound.roundStart,
+            totalReceived: settlement.payoutCents / 100,
+          }
+        }
+      })
+
+      if (newestWinningRound) setRoundWin(newestWinningRound)
+    })
+
+    const retryTimer = window.setTimeout(() => {
+      setPendingSettlementRetry((current) => current + 1)
+    }, PENDING_SETTLEMENT_RETRY_MS)
+
+    return () => {
+      isActive = false
+      controller.abort()
+      window.clearTimeout(retryTimer)
+    }
+  }, [
+    pendingRoundStarts,
+    pendingRoundStartsKey,
+    pendingSettlementRetry,
+    marketRound.previousRounds,
+    settleRound,
+  ])
+
   const handlePurchaseLoadingChange = useCallback((isLoading: boolean) => {
     setIsPurchaseLoading(isLoading)
     if (isLoading) setPurchaseSuccess(null)
@@ -494,15 +614,8 @@ function App() {
 
   const handleOnboardingOpen = useCallback(() => {
     dismissOnboardingInvite()
-    markMazeStep(studyTask, 'onboarding-open')
     setIsOnboardingOpen(true)
-  }, [dismissOnboardingInvite, studyTask])
-
-  // Só o CTA final marca sucesso. Fechar no X, ou no arrasto, encerra o sheet
-  // sem marco: a missão é entender o funcionamento, não abrir o guia.
-  const handleOnboardingComplete = useCallback(() => {
-    markMazeStep(studyTask, 'onboarding-complete')
-  }, [studyTask])
+  }, [dismissOnboardingInvite])
 
   const handleHelpOpen = useCallback(() => {
     setProfileSheetMode('help')
@@ -510,21 +623,9 @@ function App() {
   }, [])
 
   const handleAssistantOpen = useCallback(() => {
-    markMazeStep(studyTask, 'assistant-open')
     setProfileSheetMode('help-assistant')
     setIsProfileOpen(true)
-  }, [studyTask])
-
-  // O assistente também é alcançado por dentro do sheet, pelo card do Centro de
-  // ayuda. O marco precisa valer para todos os caminhos, senão a tarefa de ajuda
-  // registraria só quem entrou pela Home.
-  const handleAssistantReached = useCallback(() => {
-    markMazeStep(studyTask, 'assistant-open')
-  }, [studyTask])
-
-  const handleAssistantAnswerShown = useCallback((faqId: string) => {
-    if (faqId === 'price-difference') markMazeStep(studyTask, 'answer-shown')
-  }, [studyTask])
+  }, [])
 
   const handleProfileClose = useCallback(() => {
     setIsProfileOpen(false)
@@ -586,10 +687,6 @@ function App() {
   const handleSaleExitEnd = useCallback(() => setSaleExit(null), [])
 
   const handleBetslipSuccess = useCallback((details: BetslipSuccessDetails) => {
-    markMazeStep(
-      studyTask,
-      details.operation === 'sell' ? 'sale-complete' : 'purchase-complete',
-    )
     setPurchaseSuccess(details)
     if (details.operation === 'sell') {
       setSaleExit((current) => (
@@ -598,23 +695,21 @@ function App() {
     }
     setSelectedSide(null)
     setContentBottomInset(DEFAULT_CONTENT_BOTTOM_INSET)
-  }, [studyTask])
+  }, [])
 
   const handleBetslipOcclusionHeightChange = useCallback((height: number) => {
     setContentBottomInset(Math.max(DEFAULT_CONTENT_BOTTOM_INSET, height))
   }, [])
 
   const handleMarketSideSelect = useCallback((side: MarketSide) => {
-    markMazeStep(studyTask, 'buy-betslip-open')
     setBetslipInitialOperationMode('buy')
     setSelectedSide(side)
-  }, [studyTask])
+  }, [])
 
   const handleEntrySell = useCallback((side: MarketSide) => {
-    markMazeStep(studyTask, 'sell-betslip-open')
     setBetslipInitialOperationMode('sell')
     setSelectedSide(side)
-  }, [studyTask])
+  }, [])
 
   const handleNavigate = useCallback((item: NavbarItemId) => {
     const nextSection: AppSection = item === 'movements'
@@ -744,10 +839,10 @@ function App() {
           className={`pulse-app__market-header${isMarketHeaderPinned ? ' pulse-app__market-header--pinned' : ''}${isMarketHeaderCompact ? ' pulse-app__market-header--compact' : ''}`}
           data-round-slug={marketRound.roundSlug}
           data-target-status={marketRound.targetStatus}
-          data-target-source={marketRound.targetSource}
+          data-target-source={marketRound.targetSource ?? ''}
           data-current-status={marketRound.currentStatus}
-          data-current-source={marketRound.currentPriceSource}
-          data-current-updated-at={marketRound.currentPriceUpdatedAt}
+          data-current-source={marketRound.currentPriceSource ?? ''}
+          data-current-updated-at={marketRound.currentPriceUpdatedAt ?? ''}
           data-animated-market-price={animatedMarketPrice.value ?? ''}
           data-display-time-zone={BTC_DISPLAY_TIME_ZONE}
           data-previous-rounds-status={marketRound.previousRoundsStatus}
@@ -857,9 +952,6 @@ function App() {
       <div
         className={`pulse-app pulse-app--${activeSection}${pageTransition ? ` pulse-app--page-transition-${pageTransition.direction} pulse-app--page-transition-${pageTransition.phase}` : ''}${isPurchaseLoading ? ' pulse-app--purchase-loading' : ''}`}
         style={appStyle}
-        data-study-version={STUDY_VERSION}
-        data-study-task={studyTask}
-        data-study-scenario={scenario.id}
         aria-busy={isPurchaseLoading}
         inert={isPurchaseLoading || isProfileOpen || isOnboardingOpen ? true : undefined}
       >
@@ -898,7 +990,7 @@ function App() {
 
         {shouldShowBetslip ? (
           <BuyBetslip
-            market={outcomeMarket}
+            market={betslipMarket}
             side={selectedSide}
             initialOperationMode={betslipInitialOperationMode}
             onSideChange={setSelectedSide}
@@ -913,7 +1005,9 @@ function App() {
         ) : shouldShowHomeAction && (
           <MarketChoice
             isClosing={isRoundClosing}
-            prices={outcomeMarket.displayPrices}
+            prices={LOCKED_MARKET_CHOICE_PREVIEW_MODE
+              ? { up: null, down: null }
+              : outcomeMarket.displayPrices}
             roundSlug={outcomeMarket.roundSlug}
             onSelect={handleMarketSideSelect}
           />
@@ -950,27 +1044,14 @@ function App() {
         initialMode={profileSheetMode}
         isOpen={isProfileOpen}
         metrics={profileMetrics}
-        onAssistantAnswerShown={handleAssistantAnswerShown}
         onAssistantNavigate={handleAssistantNavigate}
-        onAssistantReached={handleAssistantReached}
         onClose={handleProfileClose}
       />
 
       <OnboardingBottomSheet
         isOpen={isOnboardingOpen}
         onClose={handleOnboardingClose}
-        onComplete={handleOnboardingComplete}
       />
-
-      {isDebug && (
-        <StudyDiagnostics
-          balanceCents={balanceCents}
-          market={outcomeMarket}
-          position={currentPosition}
-          round={marketRound}
-          scenario={scenario}
-        />
-      )}
     </>
   )
 }
