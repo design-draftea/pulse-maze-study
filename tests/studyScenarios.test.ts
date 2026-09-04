@@ -170,6 +170,44 @@ test('o relógio começa em 10 minutos, avança e para em 5', async () => {
   assert.equal(afterThirty.roundStart, atOpen.roundStart)
 })
 
+test('o contador para em 5:00, mas o mercado não para junto', async () => {
+  const opened = await open('?task=buy&mazeStep=start')
+  const { scenario } = opened.resolution
+  const { buildStudyMarketRound } = opened.round
+
+  // Cinco minutos de missão: é aqui que o contador trava.
+  const noPiso = buildStudyMarketRound(scenario, OPENED_AT + 5 * 60_000)
+  const depois = buildStudyMarketRound(scenario, OPENED_AT + 7 * 60_000)
+  const bemDepois = buildStudyMarketRound(scenario, OPENED_AT + 9 * 60_000)
+
+  assert.equal(noPiso.remainingSeconds, 300)
+  assert.equal(depois.remainingSeconds, 300)
+  assert.equal(bemDepois.remainingSeconds, 300)
+
+  // O preço continua caminhando e a série continua crescendo depois do piso.
+  assert.notEqual(depois.currentPrice, noPiso.currentPrice)
+  assert.notEqual(bemDepois.currentPrice, depois.currentPrice)
+  assert.ok(depois.points.length > noPiso.points.length)
+  assert.ok(bemDepois.points.length > depois.points.length)
+})
+
+test('o gráfico nunca desenha um ponto depois do fim da rodada', async () => {
+  const opened = await open('?task=buy&mazeStep=start')
+  const { scenario } = opened.resolution
+  const { buildStudyMarketRound } = opened.round
+
+  for (const minutos of [9, 10, 12, 30]) {
+    const round = buildStudyMarketRound(scenario, OPENED_AT + minutos * 60_000)
+    const ultimo = round.points.at(-1)!.timestamp
+
+    assert.ok(
+      ultimo <= round.roundEnd,
+      `aos ${minutos}min o gráfico passou do fim da rodada`,
+    )
+    assert.ok(round.points.length <= 901)
+  }
+})
+
 test('o gráfico é determinístico e termina no preço atual', async () => {
   const opened = await open('?task=buy&mazeStep=start')
   const { scenario } = opened.resolution

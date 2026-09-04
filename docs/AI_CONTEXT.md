@@ -15,9 +15,14 @@
 - `studyScenarios.ts` prepara o cenário antes do primeiro render, a partir do
   `?task=` da URL. Sem tarefa válida a aplicação mostra a tela de link inválido
   em vez da Home.
-- `studyMarketRound.ts` mantém um relógio virtual: a rodada tem 15 minutos
-  conceituais, a pessoa entra com dez restantes e o contador para em cinco.
-  Nenhuma rodada vira durante uma missão do Maze.
+- `studyMarketRound.ts` mantém dois relógios, de propósito. O do **contador**
+  para aos cinco minutos restantes, para nenhuma rodada virar durante uma missão
+  do Maze. O do **mercado** vai até o fim dos 15 minutos conceituais da rodada —
+  dez minutos reais de missão. Amarrar os dois ao mesmo limite congelava gráfico
+  e cotações cinco minutos depois da abertura, e um mercado parado não é o
+  produto que o estudo quer medir. O limite do mercado é a duração da rodada
+  porque um ponto depois do fim dela faria o eixo do gráfico contradizer o
+  horário exibido no cabeçalho.
 - `studyPriceSeries.ts` gera o preço. Antes da abertura, interpola as oito
   âncoras de `STUDY_PRICE_POINTS`; depois, o preço caminha por uma soma de
   senoides de períodos não harmônicos, deslocada para valer zero na abertura. Os

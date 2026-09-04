@@ -129,6 +129,13 @@ Variável, e que **não** pode ser citado em pergunta nem em texto de tarefa:
 O exemplo do onboarding é ilustração estática no código, não dado de mercado:
 ele mostra sempre os mesmos números, mesmo com a Home atrás dele em 65%.
 
+O contador para em `05:00` e não volta a andar: é o que impede a rodada de virar
+no meio de uma missão. O mercado **não** para junto — preço, gráfico e cotações
+seguem até o fim dos 15 minutos conceituais da rodada, o que dá dez minutos reais
+de missão. Uma tarefa de Maze dura de um a três minutos, então nenhum
+participante alcança esse limite; se alguém deixar a aba aberta por mais tempo, o
+preço assenta e o contador continua marcando `05:00`.
+
 Duas garantias tornam isso seguro para a coleta. O preço é sempre um número
 inteiro de centavos, então o que a tela exibe é exatamente o que a execução
 cobra — 67% e 67¢ são o mesmo número, e as participações fecham com a conta que o

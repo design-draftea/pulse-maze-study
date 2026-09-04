@@ -58,8 +58,15 @@ const timeFormatter = new Intl.DateTimeFormat('es-MX', {
   timeZone: STUDY_TIME_ZONE,
 })
 
+/** Tempo decorrido na rodada, sem trava. Base dos dois relógios abaixo. */
+const getRawElapsedInRoundMs = (openedAt: number, now: number) => (
+  STUDY_ROUND_DURATION_MS
+  - STUDY_INITIAL_REMAINING_MS
+  + Math.max(0, now - openedAt)
+)
+
 /**
- * Relógio virtual da tarefa.
+ * Relógio do contador.
  *
  * A rodada tem 15 minutos conceituais e a pessoa entra com dez restantes. O
  * contador avança normalmente e para aos cinco minutos: nenhuma rodada pode
@@ -69,15 +76,28 @@ const timeFormatter = new Intl.DateTimeFormat('es-MX', {
 export const getStudyElapsedInRoundMs = (
   openedAt: number,
   now: number,
-): number => {
-  const sinceOpen = Math.max(0, now - openedAt)
-  const elapsed = STUDY_ROUND_DURATION_MS - STUDY_INITIAL_REMAINING_MS + sinceOpen
+): number => Math.min(
+  getRawElapsedInRoundMs(openedAt, now),
+  STUDY_ROUND_DURATION_MS - STUDY_FLOOR_REMAINING_MS,
+)
 
-  return Math.min(
-    elapsed,
-    STUDY_ROUND_DURATION_MS - STUDY_FLOOR_REMAINING_MS,
-  )
-}
+/**
+ * Relógio do mercado, deliberadamente separado do contador.
+ *
+ * O contador precisa parar para a rodada não virar, mas o preço não: amarrar os
+ * dois ao mesmo limite congelava o gráfico e as cotações cinco minutos depois da
+ * abertura, e um mercado parado não é o produto que o estudo quer medir. Aqui a
+ * trava é a própria duração da rodada, então o preço caminha pelos 15 minutos
+ * inteiros — dez minutos reais de missão — sem nunca desenhar um ponto depois do
+ * fim da rodada, que faria o eixo do gráfico contradizer o horário exibido.
+ */
+export const getStudyMarketElapsedMs = (
+  openedAt: number,
+  now: number,
+): number => Math.min(
+  getRawElapsedInRoundMs(openedAt, now),
+  STUDY_ROUND_DURATION_MS,
+)
 
 export const getStudyRemainingSeconds = (
   openedAt: number,
@@ -92,15 +112,15 @@ export const buildStudyMarketRound = (
 ): StudyMarketRoundState => {
   const roundStart = getStudyRoundStart(scenario.openedAt)
   const roundEnd = roundStart + STUDY_ROUND_DURATION_MS
-  const elapsedMs = getStudyElapsedInRoundMs(scenario.openedAt, now)
-  const virtualNow = roundStart + elapsedMs
+  const marketElapsedMs = getStudyMarketElapsedMs(scenario.openedAt, now)
+  const virtualNow = roundStart + marketElapsedMs
   const remainingSeconds = getStudyRemainingSeconds(scenario.openedAt, now)
   const points = buildStudyRoundSeries(roundStart, virtualNow, scenario.id)
   // O preço exibido é o último ponto da série, e não um valor calculado à
   // parte: a ponta do gráfico, a etiqueta e o card `Precio actual` precisam
   // concordar em todo quadro.
   const currentPrice = points.at(-1)?.value
-    ?? getStudyPriceAt(elapsedMs, createStudyPriceNoise(scenario.id, 1))
+    ?? getStudyPriceAt(marketElapsedMs, createStudyPriceNoise(scenario.id, 1))
 
   return {
     now: virtualNow,
