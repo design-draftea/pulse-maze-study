@@ -33,6 +33,12 @@ import {
   type RoundDataSource,
 } from '../services/marketFallback'
 import { useBtcPriceFeeds } from './useBtcPriceFeeds'
+import {
+  MAX_RANGE_HISTORY_POINTS,
+  RANGE_HISTORY_DURATION_MS,
+  readChartHistory,
+  writeChartHistory,
+} from '../services/chartHistoryCache'
 
 export type MarketDataStatus =
   | 'connecting'
@@ -42,8 +48,6 @@ export type MarketDataStatus =
   | 'unavailable'
 
 const MAX_HISTORY_POINTS = BTC_ROUND_DURATION_MS / 1000 + 1
-const RANGE_HISTORY_DURATION_MS = 60 * 60_000
-const MAX_RANGE_HISTORY_POINTS = RANGE_HISTORY_DURATION_MS / 1000 + 1
 const ROUND_BACKFILL_RETRY_DELAYS_MS = [2_000, 5_000, 15_000]
 const CLOCK_INTERVAL_MS = 250
 const TARGET_FALLBACK_DELAY_MS = 3_000
@@ -90,9 +94,13 @@ export type BtcMarketRoundState = {
 
 const readRoundCache = () => {
   if (typeof window === 'undefined') return []
-  return deserializeMarketRoundCache(
-    window.localStorage.getItem(MARKET_ROUND_CACHE_KEY),
-  )
+  try {
+    return deserializeMarketRoundCache(
+      window.localStorage.getItem(MARKET_ROUND_CACHE_KEY),
+    )
+  } catch {
+    return []
+  }
 }
 
 const isPositivePrice = (value: number | null): value is number => (
@@ -163,7 +171,11 @@ export function useResilientBtcMarketRound(): BtcMarketRoundState {
     roundStart: number
     points: PricePoint[]
   }>(() => ({ roundStart, points: [] }))
-  const [observedHistoryPoints, setObservedHistoryPoints] = useState<PricePoint[]>([])
+  const [observedHistoryPoints, setObservedHistoryPoints] = useState<PricePoint[]>(
+    () => readChartHistory(),
+  )
+  const historyToPersistRef = useRef(observedHistoryPoints)
+  const persistedHistoryRef = useRef(observedHistoryPoints)
   const [rangeBackfillPoints, setRangeBackfillPoints] = useState<PricePoint[]>([])
   const [officialPreviousRounds, setOfficialPreviousRounds] = useState<
     HistoricalBtcRound[]
@@ -229,11 +241,47 @@ export function useResilientBtcMarketRound(): BtcMarketRoundState {
 
   useEffect(() => {
     cachedRoundsRef.current = cachedRounds
-    window.localStorage.setItem(
-      MARKET_ROUND_CACHE_KEY,
-      serializeMarketRoundCache(cachedRounds),
-    )
+    try {
+      window.localStorage.setItem(
+        MARKET_ROUND_CACHE_KEY,
+        serializeMarketRoundCache(cachedRounds),
+      )
+    } catch {
+      // O cache de rodadas também deve tolerar armazenamento indisponível.
+    }
   }, [cachedRounds])
+
+  useEffect(() => {
+    historyToPersistRef.current = observedHistoryPoints
+  }, [observedHistoryPoints])
+
+  useEffect(() => {
+    const flush = () => {
+      const points = historyToPersistRef.current
+      if (points === persistedHistoryRef.current) return
+      writeChartHistory(points)
+      persistedHistoryRef.current = points
+    }
+    const flushWhenHidden = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
+    // Agendar depois da gravação evita que atrasos do navegador aproximem
+    // duas execuções, como pode acontecer com setInterval.
+    let timer = 0
+    const persistAndSchedule = () => {
+      flush()
+      timer = window.setTimeout(persistAndSchedule, 1000)
+    }
+    timer = window.setTimeout(persistAndSchedule, 1000)
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', flushWhenHidden)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', flushWhenHidden)
+      flush()
+    }
+  }, [])
 
   useEffect(() => {
     const syncRoundCache = (event: StorageEvent) => {

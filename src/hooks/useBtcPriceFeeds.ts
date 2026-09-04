@@ -3,6 +3,7 @@ import {
   BTC_PRICE_STALE_MS,
   isPriceFeedFresh,
   selectFreshPriceFeed,
+  selectInitialPriceFeed,
   type BtcPriceSource,
   type PriceFeedCandidate,
 } from '../services/marketFallback'
@@ -341,9 +342,15 @@ export function useBtcPriceFeeds(
     sourceLock,
   ])
 
-  const selected = isLockedCandidateFresh
-    ? lockedCandidate
-    : freshCandidate ?? lockedCandidate ?? getLatestValidFeed(feeds)
+  const selected = lockForCurrentRound?.source == null
+    ? selectInitialPriceFeed(
+        freshCandidate,
+        now,
+        lockForCurrentRound?.selectionDeadline ?? now + SOURCE_SELECTION_GRACE_MS,
+      )
+    : isLockedCandidateFresh
+      ? lockedCandidate
+      : freshCandidate ?? lockedCandidate ?? getLatestValidFeed(feeds)
 
   return {
     source: selected?.source ?? null,

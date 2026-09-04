@@ -9,7 +9,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test:fallback": "node --test tests/marketFallback.test.ts",
-    "test:chart": "node --test tests/priceChartModel.test.ts tests/marketPriceDirection.test.ts",
+    "test:chart": "node --test tests/priceChartModel.test.ts tests/marketPriceDirection.test.ts tests/chartHistoryCache.test.ts",
     "test:market": "node --test tests/outcomeMarket.test.ts tests/marketData.test.ts tests/quotePresentation.test.ts",
     "test:proxy": "node --test tests/polymarketProxy.test.mjs",
     "test:wallet": "node --test tests/prototypeWallet.test.ts",

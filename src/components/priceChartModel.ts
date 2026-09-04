@@ -27,6 +27,17 @@ export type ProjectedPricePoint = PricePoint & {
   x: number
 }
 
+// A ponta renderizada é única: o caminho termina no mesmo objeto usado pelo
+// marcador. O recorte pode conter uma guarda além da borda; ela não deve
+// produzir um segmento que ultrapassa a ponta e depois volta.
+export const connectPriceChartEndpoint = <T extends ProjectedPricePoint>(
+  points: T[],
+  endpoint: T,
+): T[] => [
+  ...points.filter((point) => point.x < endpoint.x),
+  endpoint,
+]
+
 export type StablePriceChartDomainState = {
   domain: PriceChartDomain
   contractionCandidateKey: string | null
@@ -49,13 +60,14 @@ export type PriceChartTargetPlacement = {
 
 const GRID_INTERVALS = 6
 const MINIMUM_GRID_STEP = 2.5
+export const LIVE_MINIMUM_GRID_STEP = 0.25
 const RECENT_DOMAIN_POINT_COUNT = 20
 const TREND_LOOKBACK_POINT_COUNT = 6
 const TREND_TRIGGER_INTERVALS = 2
 const TREND_SHIFT_INTERVALS = 2
 const TREND_MINIMUM_STEP_FRACTION = 0.1
-const LIVE_PIXELS_PER_SECOND = 24
-const LIVE_TIME_TICK_INTERVAL_MS = 5_000
+export const LIVE_WINDOW_DURATION_MS = 30_000
+const LIVE_TIME_TICK_INTERVAL_MS = 10_000
 const TIME_TICK_COUNT = 3
 const RANGE_CONFIG = {
   '5m': { durationMs: 5 * 60_000, timeTickIntervalMs: 2 * 60_000 },
@@ -72,7 +84,7 @@ export const getPriceChartRangeConfig = (
   if (range === 'live') {
     return {
       durationMs: null,
-      pixelsPerSecond: LIVE_PIXELS_PER_SECOND,
+      pixelsPerSecond: seriesRight / (LIVE_WINDOW_DURATION_MS / 1000),
       timeTickIntervalMs: LIVE_TIME_TICK_INTERVAL_MS,
     }
   }
@@ -257,8 +269,13 @@ export const mergePricePointSeries = (
     bySecond.set(Math.floor(point.timestamp / 1000), point)
   }
 
-  historical.forEach(addPoint)
   observed.forEach(addPoint)
+  // Candles de outra fonte/resolução servem apenas para o período anterior
+  // à observação. Não preencher lacunas internas com preços incompatíveis.
+  const firstObservedSecond = Math.min(...bySecond.keys())
+  historical.forEach((point) => {
+    if (Math.floor(point.timestamp / 1000) < firstObservedSecond) addPoint(point)
+  })
 
   return [...bySecond.values()].sort(
     (left, right) => left.timestamp - right.timestamp,
@@ -279,9 +296,11 @@ export const calculatePriceChartDomain = (
   {
     applyTrendShift = true,
     includeAllPoints = false,
+    minimumGridStep = MINIMUM_GRID_STEP,
   }: {
     applyTrendShift?: boolean
     includeAllPoints?: boolean
+    minimumGridStep?: number
   } = {},
 ): PriceChartDomain => {
   const values = getDomainValues(points, targetPrice, includeAllPoints)
@@ -298,7 +317,7 @@ export const calculatePriceChartDomain = (
   const minimum = Math.min(...values)
   const maximum = Math.max(...values)
   const step = getNiceStep(Math.max(
-    MINIMUM_GRID_STEP,
+    minimumGridStep,
     (maximum - minimum) / GRID_INTERVALS,
   ))
   const domainSpan = step * GRID_INTERVALS
@@ -353,6 +372,11 @@ export const stabilizePriceChartDomain = (
   candidate: PriceChartDomain,
   points: PricePoint[],
   now: number,
+  {
+    includeAllPoints = false,
+  }: {
+    includeAllPoints?: boolean
+  } = {},
 ): StablePriceChartDomainState => {
   if (previous === null) {
     return {
@@ -365,7 +389,10 @@ export const stabilizePriceChartDomain = (
   }
 
   const current = previous.domain
-  const values = points.slice(-RECENT_DOMAIN_POINT_COUNT).map(({ value }) => value)
+  const values = (includeAllPoints
+    ? points
+    : points.slice(-RECENT_DOMAIN_POINT_COUNT)
+  ).map(({ value }) => value)
   const minimum = values.length > 0 ? Math.min(...values) : candidate.bottom
   const maximum = values.length > 0 ? Math.max(...values) : candidate.top
   const latest = values.at(-1) ?? (candidate.bottom + candidate.top) / 2

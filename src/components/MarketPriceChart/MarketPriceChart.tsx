@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BTC_DISPLAY_TIME_ZONE } from '../../services/marketData'
 import {
   PriceChart,
@@ -10,9 +10,12 @@ import {
 } from '../PriceChart'
 import {
   calculatePriceChartDomain,
+  clampPriceChartAnchor,
   getPriceChartRangeConfig,
   getPriceChartWindowPoints,
   interpolatePriceChartDomain,
+  LIVE_WINDOW_DURATION_MS,
+  LIVE_MINIMUM_GRID_STEP,
   stabilizePriceChartDomain,
   type StablePriceChartDomainState,
 } from '../priceChartModel'
@@ -33,7 +36,6 @@ interface MarketPriceChartProps {
 }
 
 const DOMAIN_ANIMATION_DURATION_MS = 280
-const DEFAULT_WINDOW_SPAN_MS = 9_833
 
 const domainsAreEqual = (
   first: PriceChartDomain,
@@ -101,37 +103,48 @@ export function MarketPriceChart({
   currentUpdatedAt,
 }: MarketPriceChartProps) {
   const [range, setRange] = useState<PriceChartRange>('live')
-  const [panState, setPanState] = useState<{
-    roundStart: number
-    anchor: number | null
-  }>(() => ({ roundStart, anchor: null }))
-  const [windowSpanMs, setWindowSpanMs] = useState(DEFAULT_WINDOW_SPAN_MS)
-  const viewAnchorTimestamp = panState.roundStart === roundStart
-    ? panState.anchor
-    : null
-  const setViewAnchorTimestamp = useCallback(
-    (anchor: number | null) => setPanState({ roundStart, anchor }),
-    [roundStart],
+  const [panAnchor, setViewAnchorTimestamp] = useState<number | null>(null)
+  const [windowSpanMs, setWindowSpanMs] = useState(LIVE_WINDOW_DURATION_MS)
+  // A série contínua já mescla candles e observações de várias rodadas.
+  // Enquanto ela carrega, conservar os pontos reais disponíveis da rodada.
+  const displayedPoints = historyPoints.length > 0 ? historyPoints : points
+  const chartTime = Math.max(now, displayedPoints.at(-1)?.timestamp ?? now)
+  const viewAnchorTimestamp = panAnchor === null ? null : clampPriceChartAnchor(
+    panAnchor, displayedPoints, windowSpanMs, chartTime,
   )
-  const displayedPoints = range === 'live' ? points : historyPoints
+  const liveWindowPoints = useMemo(
+    () => getPriceChartWindowPoints(
+      displayedPoints,
+      chartTime - LIVE_WINDOW_DURATION_MS,
+      chartTime,
+    ),
+    [chartTime, displayedPoints],
+  )
 
   const candidateDomain = useMemo(
-    () => calculatePriceChartDomain(points, targetPrice),
-    [points, targetPrice],
+    () => calculatePriceChartDomain(liveWindowPoints, targetPrice, {
+      includeAllPoints: true,
+      minimumGridStep: LIVE_MINIMUM_GRID_STEP,
+    }),
+    [liveWindowPoints, targetPrice],
   )
   const pannedDomain = useMemo(() => {
     if (range !== 'live' || viewAnchorTimestamp === null) return null
 
     const windowPoints = getPriceChartWindowPoints(
-      points,
+      displayedPoints,
       viewAnchorTimestamp - windowSpanMs,
       viewAnchorTimestamp,
     )
 
     return windowPoints.length === 0
       ? null
-      : calculatePriceChartDomain(windowPoints, null, { applyTrendShift: false })
-  }, [points, range, viewAnchorTimestamp, windowSpanMs])
+      : calculatePriceChartDomain(windowPoints, null, {
+          applyTrendShift: false,
+          includeAllPoints: true,
+          minimumGridStep: LIVE_MINIMUM_GRID_STEP,
+        })
+  }, [displayedPoints, range, viewAnchorTimestamp, windowSpanMs])
   const fixedRangeDomain = useMemo(() => {
     const durationMs = getPriceChartRangeConfig(range, 1).durationMs
     if (durationMs === null) return null
@@ -152,23 +165,21 @@ export function MarketPriceChart({
     })
   }, [historyPoints, now, range, targetPrice])
   const [stableDomainState, setStableDomainState] = useState<{
-    roundStart: number
     inputKey: string
     state: StablePriceChartDomainState
   }>(() => ({
-    roundStart,
     inputKey: '',
     state: stabilizePriceChartDomain(
       null,
       candidateDomain,
-      points,
-      points.at(-1)?.timestamp ?? Date.now(),
+      liveWindowPoints,
+      chartTime,
+      { includeAllPoints: true },
     ),
   }))
   const [initialRoundStart] = useState(roundStart)
-  const domainTimestamp = points.at(-1)?.timestamp ?? roundStart
+  const domainTimestamp = chartTime
   const domainInputKey = [
-    roundStart,
     candidateDomain.bottom,
     candidateDomain.top,
     candidateDomain.step,
@@ -178,23 +189,19 @@ export function MarketPriceChart({
 
   if (stableDomainState.inputKey !== domainInputKey) {
     resolvedDomainState = {
-      roundStart,
       inputKey: domainInputKey,
       state: stabilizePriceChartDomain(
-        stableDomainState.roundStart === roundStart
-          ? stableDomainState.state
-          : null,
+        stableDomainState.state,
         candidateDomain,
-        points,
+        liveWindowPoints,
         domainTimestamp,
+        { includeAllPoints: true },
       ),
     }
     setStableDomainState(resolvedDomainState)
   }
 
-  const liveDomain = resolvedDomainState.roundStart === roundStart
-    ? resolvedDomainState.state.domain
-    : candidateDomain
+  const liveDomain = resolvedDomainState.state.domain
   const domain = fixedRangeDomain ?? pannedDomain ?? liveDomain
   const renderDomain = useAnimatedPriceChartDomain(domain)
 
@@ -210,13 +217,11 @@ export function MarketPriceChart({
       entries={entries}
       locale="es-MX"
       timeZone={BTC_DISPLAY_TIME_ZONE}
-      seriesKey={roundStart}
+      seriesKey={initialRoundStart}
       viewAnchorTimestamp={viewAnchorTimestamp}
       onViewAnchorChange={setViewAnchorTimestamp}
       onWindowSpanChange={setWindowSpanMs}
-      resetReason={roundStart === initialRoundStart
-        ? 'initial-load'
-        : 'round-change'}
+      resetReason="initial-load"
       source={currentSource}
       status={currentStatus}
       updatedAt={currentUpdatedAt}

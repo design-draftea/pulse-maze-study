@@ -5,12 +5,22 @@ import {
   createSyntheticOutcomeMarket,
   deserializeMarketRoundCache,
   selectFreshPriceFeed,
+  selectInitialPriceFeed,
   serializeMarketRoundCache,
   smoothFallbackOutcomePrices,
   upsertCachedMarketRound,
   type CachedMarketRound,
 } from '../src/services/marketFallback.ts'
 import { quoteOrderBook } from '../src/services/outcomeMarket.ts'
+
+test('não publica o preço provisório de outra fonte antes da seleção inicial', () => {
+  const fallback = { source: 'coinbase' as const, value: 110, updatedAt: 1000 }
+  const chainlink = { source: 'chainlink' as const, value: 100, updatedAt: 2000 }
+  assert.equal(selectInitialPriceFeed(fallback, 1000, 3000), null)
+  assert.equal(selectInitialPriceFeed(chainlink, 2000, 3000), chainlink)
+  assert.equal(selectInitialPriceFeed(fallback, 3000, 3000), fallback)
+  assert.equal(selectInitialPriceFeed(null, 4000, 3000), null)
+})
 import {
   applyWalletPurchase,
   applyWalletSale,
