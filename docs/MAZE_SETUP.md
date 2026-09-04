@@ -132,6 +132,22 @@ implementar:
   mova mais rápido que isso faz a confirmação da compra ser recusada no meio da
   tarefa, e o participante vê um erro que não existe no produto.
 
+### Consequência do gráfico contínuo
+
+O Pulse ganhou depois do primeiro snapshot um histórico de gráfico que atravessa
+rodadas e é persistido em `localStorage` sob a chave `pulse.chart-history.v1`
+(`src/services/chartHistoryCache.ts`). Duas implicações para quem implementar o
+estudo:
+
+- A chave precisa entrar no namespace do estudo, junto das demais. Se ficar como
+  está, o gráfico da pesquisa lê e escreve o histórico do Pulse principal aberto
+  no mesmo aparelho — e um participante veria pontos de preço real misturados aos
+  simulados.
+- O histórico atravessar rodadas e sobreviver ao reload é bom para o produto e
+  ruim para a repetibilidade do estudo: uma segunda abertura da mesma tarefa
+  restauraria a curva da primeira. A limpeza do namespace na entrada por uma URL
+  de tarefa precisa alcançar essa chave.
+
 ## 5. Snippet do Maze
 
 **Situação: pendente.** O snippet oficial ainda não foi fornecido pela equipe.

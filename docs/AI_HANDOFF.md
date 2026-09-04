@@ -6,10 +6,31 @@
 - Agente que entrega: Claude
 - Agente esperado a seguir: a pessoa usuária, para decidir o próximo passo do estudo
 - Status: a implementação exploratória do estudo foi revertida a pedido. A árvore
-  voltou a ser a cópia do `design-draftea/pulse`; ficaram apenas os dois
-  documentos da pesquisa.
+  é a cópia do `design-draftea/pulse`, agora sincronizada com o gráfico contínuo;
+  ficaram apenas os dois documentos da pesquisa.
 - Branch: `research/maze-v1`
-- Snapshot da fonte: `design-draftea/pulse@a29313075fbafb6d5a1de76e818a1ae780a15acb`
+- Snapshot da fonte: `design-draftea/pulse@f3dd1ddd4183047f97cc7f772253970b4c35c436`
+- Snapshot anterior: `a29313075fbafb6d5a1de76e818a1ae780a15acb`
+
+### Sincronização com o Pulse principal
+
+O fluxo é unidirecional e manual: melhorias do Pulse principal vêm para cá, e
+nada daqui volta para lá. O remote `upstream-readonly` existe só para leitura e
+tem o push desabilitado.
+
+Esta branch incorporou por merge os seis commits do gráfico contínuo — janela
+`LIVE` de 30 segundos, histórico de até uma hora atravessando rodadas e
+persistido em `localStorage`, escala vertical a partir de US$ 0,25, ponta única
+da linha e espera de 3s pela Chainlink na seleção inicial. Nenhum conflito, já
+que esta cópia não tem divergência de código. Suítes originais, `pnpm lint` e
+`tsc -b` limpos depois do merge.
+
+Para sincronizar de novo:
+
+```bash
+git fetch upstream-readonly main
+git merge upstream-readonly/main
+```
 
 ### O que existe nesta branch agora
 
