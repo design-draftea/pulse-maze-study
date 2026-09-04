@@ -61,7 +61,7 @@ test('cada tarefa carrega o seed correto', async () => {
 
   const help = await open('?task=help&mazeStep=start')
   assert.equal(help.resolution.scenario.onboarding.completed, true)
-  assert.equal(help.resolution.scenario.market.currentPrice, 80_012.40)
+  assert.equal(help.resolution.scenario.market.targetPrice, 80_000)
 })
 
 test('todas as tarefas abrem na Home', async () => {
@@ -183,6 +183,17 @@ test('o gráfico é determinístico e termina no preço atual', async () => {
   assert.equal(first.currentPrice, 80_012.40)
   assert.equal(first.targetPrice, 80_000)
 
+  // A ponta do gráfico e o card `Precio actual` leem o mesmo número em todo
+  // instante: são a mesma posição da série, não dois cálculos paralelos.
+  for (const offset of [0, 45_000, 200_000, 600_000]) {
+    const round = buildStudyMarketRound(scenario, OPENED_AT + offset)
+    assert.equal(round.currentPrice, round.points.at(-1)?.value)
+  }
+
+  // Um ponto já desenhado nunca muda de valor quando a série cresce.
+  const later = buildStudyMarketRound(scenario, OPENED_AT + 120_000)
+  assert.deepEqual(later.points.slice(0, first.points.length), first.points)
+
   // A forma da abertura não depende do instante real em que a pessoa entrou.
   const other = await (async () => {
     uninstallFakeWindow()
@@ -220,9 +231,13 @@ test('as dez rodadas anteriores são estáveis e equilibradas', async () => {
 test('UP e DOWN abrem em 67% e 33% para todas as tarefas', async () => {
   for (const task of ['onboarding', 'buy', 'sell', 'help']) {
     const opened = await open(`?task=${task}&mazeStep=start`)
+    const round = opened.round.buildStudyMarketRound(
+      opened.resolution.scenario,
+      OPENED_AT,
+    )
     const market = opened.outcome.buildStudyOutcomeMarket({
-      scenario: opened.resolution.scenario,
-      roundSlug: 'study',
+      currentPrice: round.currentPrice,
+      roundSlug: round.roundSlug,
       quotedAt: OPENED_AT,
     })
 
@@ -232,4 +247,26 @@ test('UP e DOWN abrem em 67% e 33% para todas as tarefas', async () => {
     assert.equal(market.source, 'study')
     uninstallFakeWindow()
   }
+})
+
+test('depois da abertura o mercado caminha, e igual para todo mundo', async () => {
+  const opened = await open('?task=buy&mazeStep=start')
+  const { scenario } = opened.resolution
+  const precoEm = (offset: number) => opened.outcome.buildStudyOutcomeMarket({
+    currentPrice: opened.round
+      .buildStudyMarketRound(scenario, OPENED_AT + offset).currentPrice,
+    roundSlug: 'study',
+    quotedAt: OPENED_AT + offset,
+  }).displayPrices.up
+
+  const trajetoria = [0, 30_000, 90_000, 210_000, 540_000].map(precoEm)
+
+  assert.equal(trajetoria[0], 0.67)
+  assert.ok(
+    new Set(trajetoria).size > 1,
+    'UP ficou parado ao longo da missão',
+  )
+  // Duas leituras do mesmo instante entregam o mesmo preço: o movimento é uma
+  // função do tempo decorrido, não um sorteio.
+  assert.deepEqual([0, 30_000, 90_000, 210_000, 540_000].map(precoEm), trajetoria)
 })

@@ -117,8 +117,8 @@ Quão fácil ou difícil foi fazer a entrada?
 
 **Pergunta de múltipla escolha**
 
-A tela mostrou que, ao usar US$10, você receberia US$14,93 caso acertasse. O que
-representa esse valor?
+Ao usar US$10, a tela mostrou um valor em “Ganancia potencial”. O que esse valor
+representa?
 
 1. O valor total que eu receberia.
 2. Meu ganho, sem contar os US$10 utilizados.
@@ -128,13 +128,11 @@ representa esse valor?
 
 **Pergunta opcional de múltipla escolha**
 
-Nesse mesmo exemplo, qual seria o seu ganho?
+Esse valor em “Ganancia potencial” inclui os US$10 que você usou?
 
-1. US$4,93.
-2. US$10.
-3. US$14,93.
-4. US$0,67.
-5. Não tenho certeza.
+1. Sim, é o total que eu receberia: os US$10 mais o ganho.
+2. Não, é só o ganho, que viria além dos US$10.
+3. Não tenho certeza.
 
 ## Tarefa 3: venda
 
@@ -251,26 +249,45 @@ Agradecemos pelo seu tempo e pela contribuição.
 
 ---
 
-## Nota de revisão: a pergunta 2 da tarefa de compra
+## Nota de revisão: por que as perguntas não citam valores
 
-A pergunta “o que representa US$14,93” e a opcional sobre o ganho foram escritas
-supondo que a tela mostre os dois números separados. **O betslip do Pulse mostra
-apenas um:** `US$14.93`, sob o rótulo `Ganancia potencial`.
+O mercado do protótipo se move. O preço do Bitcoin caminha durante a missão e
+UP e DOWN acompanham, em degraus de um ponto percentual, como no produto real.
+A caminhada é determinística — é função do tempo decorrido desde a abertura da
+tarefa, então é o mesmo filme para todo participante —, mas cada pessoa age num
+instante diferente e portanto compra a um preço diferente.
 
-Os US$4,93 aparecem no exemplo do onboarding — o card do terceiro passo mostra
-`Si aciertas, recibes US$14.93` e `Ganancia +US$4.93` —, mas não no momento da
-compra.
+Na prática: quem confirma a compra com UP em 67% recebe 14,93 participações e vê
+US$14,93 em “Ganancia potencial”; quem confirma com UP em 65% recebe 15,38 e vê
+US$15,38. **Por isso nenhuma pergunta pode citar um valor.**
 
-Isso foi deixado como está, de propósito. O rótulo é conteúdo aprovado do
-produto, e a distância entre ele e o número que carrega é exatamente a confusão
-que a pergunta mede. Corrigir a tela antes da coleta responderia a pergunta no
-lugar do participante.
+O que continua fixo e pode ser citado:
 
-Consequência para a análise: a alternativa 2 (“meu ganho, sem contar os US$10”)
-é a leitura que o rótulo induz, e a alternativa 1 (“o valor total”) é a correta.
-Uma taxa alta de respostas na alternativa 2 não indica desatenção — indica que o
-rótulo está ensinando a coisa errada, e esse é um resultado acionável.
+- O **monto usado** é sempre US$10, então o saldo depois da compra é sempre
+  US$2.030,00.
+- O **exemplo do onboarding** é ilustração estática, não dado de mercado: o card
+  do terceiro passo mostra sempre US$10, 67¢, 14,93 participações, US$14,93 e
+  +US$4,93. As perguntas da tarefa 1 se apoiam nele com segurança.
+- A **abertura de qualquer tarefa** mostra sempre UP em 67% e DOWN em 33%. O que
+  varia é o que acontece depois.
 
-Se a decisão for medir outra coisa, alinhe antes da coleta: ou o rótulo muda no
-Pulse principal e o estudo mede a versão corrigida, ou a pergunta opcional sobre
-o ganho é removida por não ter apoio na tela.
+O que se perde: não dá mais para comparar entre participantes se alguém “acertou
+US$14,93”. A compreensão passa a ser medida pela relação entre os números — se a
+pessoa entende que o valor mostrado inclui o monto usado —, e não pelo número em
+si. É por isso que a pergunta opcional virou uma pergunta de inclusão, e não de
+aritmética.
+
+O que se ganha: a tarefa 3 fica melhor sustentada. A pergunta “o que determina
+quanto você recebe ao vender antes do final da rodada” tem como resposta correta
+“o valor das minhas participações naquele momento” — e agora esse valor
+visivelmente muda na tela enquanto a pessoa decide, em vez de ficar parado
+contradizendo a alternativa certa.
+
+Permanece em aberto um ponto de conteúdo do produto: o betslip mostra um único
+número sob o rótulo `Ganancia potencial`, e esse número é o total recebido, não o
+ganho. Os dois só aparecem separados no onboarding. A tela foi mantida como está
+porque o rótulo é conteúdo aprovado e a ambiguidade é justamente o que a pergunta
+mede — corrigi-la antes da coleta responderia a pergunta no lugar do
+participante. Na análise, a alternativa 2 é a leitura que o rótulo induz e a 1 é
+a correta; uma taxa alta na 2 é um resultado acionável sobre o rótulo, não
+desatenção do participante.

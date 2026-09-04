@@ -59,6 +59,45 @@ export const STUDY_PRICE_POINTS = [
   80_012.40,
 ] as const
 
+/**
+ * Osciladores da caminhada de preço depois da abertura da tarefa.
+ *
+ * Períodos não harmônicos somados não se repetem dentro dos dez minutos da
+ * missão, então a linha não desenha um padrão reconhecível. A soma das
+ * amplitudes limita o passeio a cerca de US$28 em torno do preço de abertura:
+ * largo o bastante para o gráfico ter relevo e o indicador de direção voltar a
+ * funcionar, estreito o bastante para o preço objetivo continuar sendo uma
+ * referência plausível.
+ */
+export const STUDY_PRICE_OSCILLATORS = [
+  { periodMs: 37_000, amplitude: 3.1, phase: 0.7 },
+  { periodMs: 91_000, amplitude: 7.4, phase: 2.1 },
+  { periodMs: 211_000, amplitude: 11.2, phase: 4.4 },
+  { periodMs: 523_000, amplitude: 6.3, phase: 1.3 },
+] as const
+
+/** Ruído por segundo somado à caminhada, em dólares. */
+export const STUDY_PRICE_JITTER = 0.6
+
+/**
+ * Quanto o preço de UP se move por dólar de variação do Bitcoin.
+ *
+ * UP e DOWN acompanham o preço porque é assim que um mercado de previsão se
+ * comporta: subir em direção ao objetivo encarece o lado que aposta nisso. A
+ * sensibilidade é deliberadamente baixa — no pior alinhamento dos osciladores o
+ * preço se move menos de 1¢ a cada três segundos, que é a tolerância da
+ * proteção de execução do betslip. Acima disso, a confirmação de uma compra
+ * seria recusada no meio da tarefa e o participante veria um erro que não
+ * existe no produto.
+ */
+export const STUDY_UP_SENSITIVITY_PER_DOLLAR = 0.0016
+
+/** Limites do preço de UP. DOWN é sempre o complemento. */
+export const STUDY_UP_PRICE_RANGE = { min: 0.55, max: 0.8 } as const
+
+/** Diferença entre a melhor oferta de compra e a de venda, em cada lado. */
+export const STUDY_BOOK_SPREAD = 0.06
+
 /** Profundidade simulada: participações disponíveis no melhor preço. */
 export const STUDY_BOOK_DEPTH = 100_000
 

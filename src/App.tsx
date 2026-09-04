@@ -168,7 +168,10 @@ function App() {
     sell,
     settleRound,
   } = usePrototypeWallet(marketRound.roundStart)
-  const outcomeMarket = useStudyOutcomeMarket(scenario, marketRound.roundSlug)
+  const outcomeMarket = useStudyOutcomeMarket(
+    marketRound.currentPrice,
+    marketRound.roundSlug,
+  )
   const currentRoundMarketValueCents = useMemo(() => {
     let totalValueCents = 0
 

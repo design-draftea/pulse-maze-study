@@ -102,6 +102,40 @@ do menu de perfil ou pelo card central do `Centro de ayuda` — os três marcam
 aparece na conversa, e não no envio da pergunta: a pessoa só encontrou o que
 procurava quando o texto está na tela.
 
+## 3.1. O mercado se move: o que é fixo e o que não é
+
+O preço do Bitcoin caminha durante a missão, e UP e DOWN acompanham em degraus
+de um ponto percentual. A caminhada é determinística — função do tempo decorrido
+desde a abertura, portanto o mesmo filme para todo participante — mas cada
+pessoa age num instante diferente e compra a um preço diferente.
+
+Fixo, e seguro de citar em qualquer pergunta:
+
+| O quê | Valor |
+|---|---|
+| Preço objetivo da rodada | US$80.000,00 |
+| Preço e percentuais na abertura | US$80.012,40 · UP 67% · DOWN 33% |
+| Saldo inicial | US$2.040,00 (US$2.030,00 na tarefa de venda) |
+| Monto da compra | US$10, então o saldo depois da compra é sempre US$2.030,00 |
+| Exemplo do onboarding | US$10 · 67¢ · 14,93 participações · US$14,93 · +US$4,93 |
+| Últimas 10 rondas | sempre as mesmas, 5 UP e 5 DOWN |
+
+Variável, e que **não** pode ser citado em pergunta nem em texto de tarefa:
+
+- O preço de UP e DOWN no momento da compra (observado entre 63% e 70%).
+- As participações recebidas, o retorno potencial e o ganho.
+- O preço e o monto da venda, e portanto o saldo final da tarefa de venda.
+
+O exemplo do onboarding é ilustração estática no código, não dado de mercado:
+ele mostra sempre os mesmos números, mesmo com a Home atrás dele em 65%.
+
+Duas garantias tornam isso seguro para a coleta. O preço é sempre um número
+inteiro de centavos, então o que a tela exibe é exatamente o que a execução
+cobra — 67% e 67¢ são o mesmo número, e as participações fecham com a conta que o
+onboarding ensina. E o preço nunca se move mais de 1¢ em três segundos, que é a
+tolerância da proteção de execução do betslip: uma confirmação nunca é recusada
+no meio da tarefa. As duas estão travadas por teste em `tests/studyMath.test.ts`.
+
 ## 4. Como o `mazeStep` é atualizado
 
 `markMazeStep` reescreve a URL com `history.replaceState`, preservando `task` e o
@@ -222,7 +256,8 @@ lugar nenhum: um participante pode ter outra aba aberta no mesmo aparelho.
 Antes de abrir a coleta, com duas ou três pessoas internas, em celular real:
 
 1. Abrir cada uma das quatro URLs e confirmar que o cenário certo carrega
-   (saldo, entradas, convite de onboarding, UP em 67%).
+   (saldo, entradas, convite de onboarding, e UP em 67% no primeiro quadro —
+   depois disso ele se move, e isso é esperado).
 2. Percorrer cada tarefa até o marco de sucesso.
 3. **Confirmar no Maze que os quatro blocos fecharam sozinhos.** Este é o teste
    que valida a detecção de query parameter descrita na seção 4.

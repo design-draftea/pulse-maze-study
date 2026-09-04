@@ -62,6 +62,12 @@ remote `upstream-readonly` existe para leitura e tem o push desabilitado.
 - `src/hooks/useOnboardingInvite.ts` passa a obedecer ao cenário da tarefa.
 - `src/components/entryFeedCadence.ts` troca `Math.random()` por um gerador com
   semente.
+- O mercado do estudo caminha: o preço do Bitcoin é uma soma de senoides de
+  períodos não harmônicos ancorada em US$80.012,40 na abertura, e UP e DOWN são
+  derivados dele e arredondados para centavos inteiros. Determinístico por ser
+  função do tempo decorrido, e não constante — decisão da pessoa responsável pela
+  pesquisa, com a contrapartida de que os montos variam por participante e as
+  perguntas do Maze não podem citá-los.
 - `src/content/help/es-MX/helpContent.ts` aplica a sobreposição do estudo nas três
   frases que afirmavam que os dados vêm de fontes de mercado.
 - `src/services/helpAssistant.ts` e `helpAssistantLive.ts` roteiam a pergunta

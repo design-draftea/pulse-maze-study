@@ -72,19 +72,6 @@ export const getStudyRoundStart = (openedAt: number) => (
   openedAt - STUDY_ROUND_ELAPSED_AT_OPEN_MS
 )
 
-const createMarketState = () => ({
-  targetPrice: STUDY_VALUES.targetPrice,
-  currentPrice: STUDY_VALUES.initialCurrentPrice,
-  prices: {
-    up: STUDY_VALUES.upBuyPrice,
-    down: STUDY_VALUES.downBuyPrice,
-  },
-  sellPrices: {
-    up: STUDY_VALUES.sellPrice,
-    down: STUDY_VALUES.downSellPrice,
-  },
-})
-
 const buildScenario = (
   task: StudyTask,
   openedAt: number,
@@ -93,7 +80,7 @@ const buildScenario = (
   id: `${task}-maze-v1`,
   task,
   startSection: START_SECTION_BY_TASK[task],
-  market: createMarketState(),
+  market: { targetPrice: STUDY_VALUES.targetPrice },
   wallet,
   onboarding: { completed: ONBOARDING_COMPLETED_BY_TASK[task] },
   openedAt,

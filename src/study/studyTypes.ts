@@ -23,13 +23,14 @@ export type MazeStep =
 
 export type StudySection = 'home' | 'entries' | 'movements'
 
-/** Estado de mercado congelado que a tarefa entrega à interface. */
+/**
+ * O que a rodada fixa. O preço objetivo é registrado no início e permanece
+ * bloqueado até o fim, como no produto. Preço atual, UP e DOWN não moram aqui:
+ * são função do tempo decorrido desde a abertura, calculados em
+ * `studyPriceSeries` e `studyOutcomeMarket`.
+ */
 export interface StudyMarketState {
   targetPrice: number
-  currentPrice: number
-  prices: Record<OutcomeSide, number>
-  /** Melhor preço de venda por lado, usado para montar as ofertas de compra. */
-  sellPrices: Record<OutcomeSide, number>
 }
 
 export interface StudyOnboardingState {

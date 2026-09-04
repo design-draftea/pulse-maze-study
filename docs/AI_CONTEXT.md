@@ -18,12 +18,22 @@
 - `studyMarketRound.ts` mantém um relógio virtual: a rodada tem 15 minutos
   conceituais, a pessoa entra com dez restantes e o contador para em cinco.
   Nenhuma rodada vira durante uma missão do Maze.
-- `studyOutcomeMarket.ts` publica UP em 67% e DOWN em 33% a partir do cenário, e
-  não do ponto médio do livro: com spread de 6¢ entre compra e venda, o ponto
-  médio mostraria 64%.
-- `studyPriceSeries.ts` gera a série do gráfico por interpolação das oito
-  âncoras de `STUDY_PRICE_POINTS`, com ondulação de gerador semeado. Nenhum
-  `Math.random()` sem semente controla preço, evento visual ou resultado.
+- `studyPriceSeries.ts` gera o preço. Antes da abertura, interpola as oito
+  âncoras de `STUDY_PRICE_POINTS`; depois, o preço caminha por uma soma de
+  senoides de períodos não harmônicos, deslocada para valer zero na abertura. Os
+  dois trechos se encontram em US$80.012,40 sem degrau. Sendo função pura do
+  tempo decorrido, a curva é a mesma para todo participante e um ponto já
+  desenhado nunca muda quando a série cresce. Nenhum `Math.random()` sem semente
+  controla preço, evento visual ou resultado.
+- `studyOutcomeMarket.ts` deriva UP do preço do Bitcoin e arredonda para
+  centavos inteiros. O arredondamento não é cosmético: a interface exibe
+  `Math.round(precio * 100)`, e um preço contínuo faria a tela dizer 67¢ enquanto
+  a execução cobrasse 0,6743. DOWN é o complemento, e o spread de 6¢ separa a
+  oferta de compra da de venda em cada lado.
+- Duas propriedades sustentam a coleta e estão travadas por teste: o preço nunca
+  se move mais de 1¢ em três segundos — acima disso a proteção de execução do
+  betslip recusaria a confirmação no meio da tarefa — e o preço exibido é sempre
+  o preço executado.
 - `studyMazeNavigation.ts` concentra `markMazeStep`, que reescreve a URL por
   `replaceState` preservando `task` e o hash.
 - Todo o armazenamento vive sob `pulse.maze.v1`. As chaves do Pulse principal não

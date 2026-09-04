@@ -11,6 +11,8 @@ import { buildStudyPreviousRounds } from './studyPreviousRounds.ts'
 import {
   buildStudyHistorySeries,
   buildStudyRoundSeries,
+  createStudyPriceNoise,
+  getStudyPriceAt,
 } from './studyPriceSeries.ts'
 import { getStudyRoundStart } from './studyScenarios.ts'
 import type { StudyPreviousRound, StudyScenario } from './studyTypes.ts'
@@ -93,6 +95,12 @@ export const buildStudyMarketRound = (
   const elapsedMs = getStudyElapsedInRoundMs(scenario.openedAt, now)
   const virtualNow = roundStart + elapsedMs
   const remainingSeconds = getStudyRemainingSeconds(scenario.openedAt, now)
+  const points = buildStudyRoundSeries(roundStart, virtualNow, scenario.id)
+  // O preço exibido é o último ponto da série, e não um valor calculado à
+  // parte: a ponta do gráfico, a etiqueta e o card `Precio actual` precisam
+  // concordar em todo quadro.
+  const currentPrice = points.at(-1)?.value
+    ?? getStudyPriceAt(elapsedMs, createStudyPriceNoise(scenario.id, 1))
 
   return {
     now: virtualNow,
@@ -106,11 +114,11 @@ export const buildStudyMarketRound = (
     seconds: String(remainingSeconds % 60).padStart(2, '0'),
     remainingSeconds,
     targetPrice: scenario.market.targetPrice,
-    currentPrice: scenario.market.currentPrice,
+    currentPrice,
     currentPriceUpdatedAt: virtualNow,
     currentPriceSource: 'study',
     targetSource: 'study',
-    points: buildStudyRoundSeries(roundStart, virtualNow, scenario.id),
+    points,
     historyPoints: buildStudyHistorySeries(roundStart, virtualNow, scenario.id),
     previousRounds: buildStudyPreviousRounds(roundStart),
     targetStatus: 'live',
@@ -133,9 +141,8 @@ export function useStudyMarketRound(
     return () => window.clearInterval(timer)
   }, [])
 
-  // O preço é constante durante a missão, então a série só cresce quando o
-  // segundo vira. Recalcular a cada 250ms produziria a mesma lista e faria o
-  // gráfico remontar quatro vezes por segundo.
+  // A série tem um ponto por segundo, então recalcular a cada 250ms produziria
+  // a mesma lista e faria o gráfico remontar quatro vezes por segundo.
   const secondTick = Math.floor(now / 1_000)
 
   return useMemo(

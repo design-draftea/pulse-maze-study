@@ -30,13 +30,14 @@ const openTask = async (task: string) => {
 }
 
 /** O mesmo retrato que o `App` entrega ao assistente, montado com dados do estudo. */
-const buildStudySnapshot = async (task: string) => {
+const buildStudySnapshotAt = async (task: string, elapsedMs = 0) => {
   const scenario = await openTask(task)
-  const round = buildStudyMarketRound(scenario, OPENED_AT)
+  const at = OPENED_AT + elapsedMs
+  const round = buildStudyMarketRound(scenario, at)
   const market = buildStudyOutcomeMarket({
-    scenario,
+    currentPrice: round.currentPrice,
     roundSlug: round.roundSlug,
-    quotedAt: OPENED_AT,
+    quotedAt: at,
   })
   const position = scenario.wallet.positionsByRound[String(round.roundStart)]
     ?? { up: 0, down: 0 }
@@ -70,6 +71,8 @@ const buildStudySnapshot = async (task: string) => {
     }),
   }
 }
+
+const buildStudySnapshot = (task: string) => buildStudySnapshotAt(task)
 
 const ask = (query: string, snapshot: ReturnType<typeof buildHelpAssistantSnapshot>) =>
   askHelpAssistant(query, {
@@ -121,6 +124,16 @@ test('os números do assistente coincidem com a Home', async () => {
   const probability = ask('¿Cuál es la probabilidad de UP?', snapshot)
   assert.match(probability.answer, /67\s*%/)
   assert.match(probability.answer, /33\s*%/)
+
+  // O que importa não é o par 67/33, que só vale na abertura: é o assistente
+  // nunca discordar da Home. Os dois arredondam o mesmo preço do mesmo livro.
+  const emCincoMinutos = await buildStudySnapshotAt('help', 5 * 60_000)
+  const maisTarde = ask('¿Cuál es la probabilidad de UP?', emCincoMinutos.snapshot)
+  const upNaHome = Math.round(emCincoMinutos.market.displayPrices.up! * 100)
+  const downNaHome = Math.round(emCincoMinutos.market.displayPrices.down! * 100)
+
+  assert.match(maisTarde.answer, new RegExp(`${upNaHome}\\s*%`))
+  assert.match(maisTarde.answer, new RegExp(`${downNaHome}\\s*%`))
 
   const price = ask('¿Cuál es el precio actual de Bitcoin?', snapshot)
   assert.match(price.answer, /80,012\.40/)
