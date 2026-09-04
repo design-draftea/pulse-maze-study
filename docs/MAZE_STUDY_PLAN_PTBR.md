@@ -84,12 +84,12 @@ Com suas próprias palavras, como funciona uma rodada no Draftea Pulse?
 
 **Pergunta de múltipla escolha**
 
-No exemplo apresentado, o que significa UP estar em 67%?
+No guia, UP e DOWN aparecem com um percentual. O que esse percentual indica?
 
-1. Cada participação custa US$0,67.
-2. O Bitcoin precisa subir 67%.
-3. Vou receber 67% do valor utilizado.
-4. Meu ganho será de US$0,67.
+1. O preço de cada participação.
+2. Quanto o preço do Bitcoin precisa subir ou cair.
+3. A parte do valor utilizado que eu receberia de volta.
+4. O meu ganho em cada participação.
 5. Não tenho certeza.
 
 **Escala**
@@ -253,10 +253,24 @@ Agradecemos pelo seu tempo e pela contribuição.
 
 ## Observação para a revisão
 
-Duas perguntas da tarefa 2 citam US$14,93 e US$4,93. Elas só funcionam se o
-ambiente do estudo entregar sempre o mesmo preço a todos os participantes: com um
-mercado que se mova, quem comprar com UP em 65% verá US$15,38, e a pergunta fica
-errada para parte da amostra. Vale decidir isso antes da tradução.
+### A tarefa 1 não cita mais o percentual
+
+A pergunta dizia “o que significa UP estar em 67%”. O número em si não corria
+risco: o exemplo do guia é texto fixo no componente, e não dado de mercado, então
+mostra 67% independentemente das cotações.
+
+O problema era outro. Ao fechar o guia, o participante encontra a Home com um
+percentual diferente — e a pergunta não dizia a qual dos dois se referia. A
+versão atual pergunta o que o percentual *indica*, sem valor, e as alternativas
+continuam sendo as mesmas confusões: variação de preço, retorno sobre o valor
+utilizado e ganho por participação.
+
+### A tarefa 2 ainda cita valores
+
+As duas perguntas sobre US$14,93 e US$4,93 continuam como no texto aprovado, e
+essas sim dependem do mercado: se ele se mover, quem comprar com UP em 65% verá
+US$15,38 e a pergunta fica errada para parte da amostra. Há uma versão sem
+números pronta para substituí-las quando essa decisão for tomada.
 
 Uma nota sobre a alternativa correta da mesma pergunta: o betslip do Pulse mostra
 um único número, e o rótulo dele é `Ganancia potencial`, embora o valor seja o
