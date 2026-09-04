@@ -1,7 +1,9 @@
-name: Deploy Pulse to GitHub Pages
+name: Deploy Pulse Maze Study
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -13,6 +15,9 @@ permissions:
 concurrency:
   group: github-pages
   cancel-in-progress: true
+
+env:
+  STUDY_VERSION: maze-v1
 
 jobs:
   build:
@@ -38,30 +43,59 @@ jobs:
       - name: Test
         run: |
           pnpm test:chart
-          pnpm test:fallback
           pnpm test:market
-          pnpm test:proxy
           pnpm test:wallet
           pnpm test:entries
+          pnpm test:help
+          pnpm test:assets
 
       - name: Lint
         run: pnpm lint
 
-      - name: Build GitHub Pages artifact
+      # O snippet oficial do Maze só entra quando a variável do repositório o
+      # habilita e o arquivo está preenchido. Sem isso o build sai limpo, que é
+      # o estado correto para uma verificação de pull request.
+      - name: Prepare Maze snippet
+        id: maze
         env:
-          VITE_BASE_PATH: /pulse/
-          VITE_POLYMARKET_PROXY_ORIGIN: ${{ vars.PULSE_POLYMARKET_PROXY_ORIGIN }}
+          MAZE_SNIPPET: ${{ vars.PULSE_MAZE_SNIPPET }}
+        run: |
+          if [ -n "$MAZE_SNIPPET" ]; then
+            printf '%s\n' "$MAZE_SNIPPET" > maze/snippet.html
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Snippet do Maze não configurado; o build sai sem instrumentação."
+          fi
+
+      - name: Build research artifact
+        env:
+          VITE_BASE_PATH: ${{ vars.PULSE_MAZE_BASE_PATH || '/pulse-maze-study/' }}
+          VITE_MAZE_ENABLED: ${{ steps.maze.outputs.enabled }}
         run: pnpm build
 
+      # A auditoria roda contra o `dist` recém-gerado, então ela reprova um
+      # deploy que reintroduza qualquer endpoint de mercado, mesmo por engano.
+      - name: Study suites and bundle audit
+        run: pnpm test:study
+
+      - name: Expose study version
+        run: |
+          echo "$STUDY_VERSION" > dist/STUDY_VERSION
+          echo "commit=$GITHUB_SHA" >> dist/STUDY_VERSION
+
       - name: Configure Pages
+        if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

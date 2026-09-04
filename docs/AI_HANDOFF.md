@@ -3,6 +3,50 @@
 ## Estado atual
 
 - Atualizado em: 2026-09-04
+- Agente que entrega: Claude
+- Agente esperado a seguir: a pessoa usuária, para autorizar merge, deploy e tag
+- Status: implementação, testes e Pull Request concluídos. **Merge, deploy e tag aguardam autorização explícita.**
+- Objetivo: criar a cópia de pesquisa `pulse-maze-study` para o teste não moderado no Maze, com dados simulados e determinísticos
+- Branch: `research/maze-v1`, criada a partir da `main` deste repositório
+- Snapshot da fonte: `design-draftea/pulse@a29313075fbafb6d5a1de76e818a1ae780a15acb`
+
+### Pendências que dependem de terceiros
+
+1. **Snippet do Maze** — não fornecido. Toda a instrumentação de URL está pronta
+   e testada; o snippet entra por `maze/snippet.html` ou pela variável de
+   repositório `PULSE_MAZE_SNIPPET`, e só é injetado com `VITE_MAZE_ENABLED=true`.
+2. **DNS de `pulse-maze.draftea.com`** — não configurado. O deploy temporário usa
+   `design-draftea.github.io/pulse-maze-study/`. Procedimento de troca na seção
+   12 de [MAZE_SETUP.md](MAZE_SETUP.md).
+3. **GitHub Pages em repositório privado** — depende do plano da organização. Se
+   não estiver disponível, o artefato é gerado pelo workflow e precisa de
+   hospedagem aprovada. O repositório não deve ser tornado público.
+4. **Proteção da branch `main`** — não configurada; depende de acesso
+   administrativo ao repositório.
+5. **Piloto técnico no Maze** — depende do snippet e da URL publicada. É o passo
+   que valida a detecção de mudança de query parameter (seção 13 de
+   [MAZE_SETUP.md](MAZE_SETUP.md)).
+
+### Decisão aberta para a pessoa usuária
+
+O betslip mostra `US$14.93` sob o rótulo `Ganancia potencial`, que é o valor
+total recebido e não o ganho líquido. Os `US$4,93` só aparecem no exemplo do
+onboarding. A tela foi mantida como está, porque o rótulo é conteúdo aprovado e a
+ambiguidade é exatamente o que a pergunta 2 da tarefa de compra mede. A nota de
+revisão no fim de [MAZE_STUDY_PLAN_PTBR.md](MAZE_STUDY_PLAN_PTBR.md) registra as
+alternativas.
+
+---
+
+## Histórico anterior a esta cópia
+
+O restante deste documento é o handoff herdado do Pulse principal no momento do
+snapshot. Ele descreve trabalho concluído naquele repositório e é mantido aqui
+apenas como registro.
+
+## Estado no snapshot
+
+- Atualizado em: 2026-09-04
 - Agente que entrega: Codex
 - Agente esperado a seguir: GitHub Actions, para validar e publicar a `main` após o merge autorizado
 - Status: implementação e validação local e no iPhone concluídas; Pull Request e merge autorizados pela pessoa usuária

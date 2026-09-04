@@ -6,7 +6,6 @@ import {
   applyOrderBookPriceChange,
   createMutableOrderBook,
   getDisplayedOutcomePrice,
-  mapOutcomeTokens,
   quoteOrderBook,
   removeSoldParticipations,
   replaceOrderBookSnapshot,
@@ -53,14 +52,6 @@ test('a venda remove somente as participações executadas do lado vendido', () 
   })
 
   assert.deepEqual(updated, { up: 12.5, down: 8 })
-})
-
-test('mapeia UP e DOWN aos token IDs independentemente da ordem', () => {
-  assert.deepEqual(
-    mapOutcomeTokens('["Down","Up"]', '["down-token","up-token"]'),
-    { up: 'up-token', down: 'down-token' },
-  )
-  assert.equal(mapOutcomeTokens('["Yes","No"]', '["1","2"]'), null)
 })
 
 test('usa midpoint quando o spread é de até 10 centavos', () => {

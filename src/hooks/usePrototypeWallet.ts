@@ -15,7 +15,6 @@ import {
   getPendingWalletRoundStarts,
   getWalletCostBasis,
   getWalletPosition,
-  LEGACY_PROTOTYPE_WALLET_STORAGE_KEYS,
   PROTOTYPE_WALLET_STORAGE_KEY,
   settleWalletRound,
   type PrototypeWalletState,
@@ -52,35 +51,15 @@ const persistWalletState = (state: PrototypeWalletState) => {
   }
 }
 
-const removeStoredWalletStates = () => {
-  window.localStorage.removeItem(PROTOTYPE_WALLET_STORAGE_KEY)
-  LEGACY_PROTOTYPE_WALLET_STORAGE_KEYS.forEach((key) => {
-    window.localStorage.removeItem(key)
-  })
-}
-
+/**
+ * A carteira já foi semeada por `prepareStudyScenario` antes do primeiro
+ * render, então aqui basta ler o que está no namespace do estudo. O reset é
+ * único e mora em `?resetStudy=1`: um segundo parâmetro só para a carteira
+ * conseguiria zerar o saldo sem zerar o cenário, e a tarefa de venda abriria
+ * sem a posição que ela precisa ter.
+ */
 const loadWalletState = () => {
-  const url = new URL(window.location.href)
-
-  if (url.searchParams.get('resetWallet') === '1') {
-    const initialState = createInitialWalletState()
-
-    try {
-      removeStoredWalletStates()
-      persistWalletState(initialState)
-    } catch {
-      // The in-memory wallet still resets when storage is unavailable.
-    }
-
-    url.searchParams.delete('resetWallet')
-    window.history.replaceState(window.history.state, '', url)
-    return initialState
-  }
-
   try {
-    LEGACY_PROTOTYPE_WALLET_STORAGE_KEYS.forEach((key) => {
-      window.localStorage.removeItem(key)
-    })
     const state = deserializeWalletState(
       window.localStorage.getItem(PROTOTYPE_WALLET_STORAGE_KEY),
     )

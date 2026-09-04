@@ -1,21 +1,21 @@
 {
-  "name": "pulse",
+  "name": "pulse-maze-study",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0-maze-v1",
   "packageManager": "pnpm@11.19.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test:fallback": "node --test tests/marketFallback.test.ts",
     "test:chart": "node --test tests/priceChartModel.test.ts tests/marketPriceDirection.test.ts",
     "test:market": "node --test tests/outcomeMarket.test.ts tests/marketData.test.ts tests/quotePresentation.test.ts",
-    "test:proxy": "node --test tests/polymarketProxy.test.mjs",
     "test:wallet": "node --test tests/prototypeWallet.test.ts",
     "test:entries": "node --test tests/openEntries.test.ts tests/wonEntries.test.ts",
     "test:help": "node --test tests/helpAssistant.test.ts tests/helpAssistantLive.test.ts",
     "test:assets": "node --test tests/assetWarmup.test.ts",
+    "test:study": "node --test tests/studyScenarios.test.ts tests/studyMath.test.ts tests/studyMazeNavigation.test.ts tests/studyStorage.test.ts tests/studyIsolation.test.mjs tests/helpAssistantStudy.test.ts",
+    "test": "pnpm test:chart && pnpm test:market && pnpm test:wallet && pnpm test:entries && pnpm test:help && pnpm test:assets && pnpm test:study",
     "preview": "vite preview"
   },
   "dependencies": {

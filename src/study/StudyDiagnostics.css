@@ -1,0 +1,42 @@
+.study-diagnostics {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline: 0;
+  z-index: 9000;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: rgb(8 10 16 / 92%);
+  color: #e8ecf5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  max-height: 45vh;
+  overflow-y: auto;
+}
+
+.study-diagnostics__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.study-diagnostics__label {
+  opacity: 0.62;
+}
+
+.study-diagnostics__value {
+  text-align: end;
+  word-break: break-all;
+}
+
+.study-diagnostics__reset {
+  margin-block-start: 6px;
+  padding: 8px;
+  border: 1px solid rgb(232 236 245 / 35%);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}

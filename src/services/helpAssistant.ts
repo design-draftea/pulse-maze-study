@@ -6,6 +6,7 @@ import {
   helpTopicItems,
 } from '../content/help/es-MX/helpContent.ts'
 import {
+  asksAboutPriceDiscrepancy,
   describeMarketPrices,
   describeSaleValue,
   FOLLOW_UPS,
@@ -721,6 +722,18 @@ export const askHelpAssistant = (
   // O conteúdo curado vem antes dos dados ao vivo: `¿Qué información tiene mi
   // entrada?` é uma definição do glossário, não uma consulta à posição real.
   if (exactMatch) return toKnowledgeResult(exactMatch)
+
+  // Perguntar por que o preço daqui difere do de outro lugar é uma pergunta
+  // sobre a origem do dado, não sobre o número. Sem esta regra, a menção a
+  // `bitcoin` levava a consulta para o preço ao vivo, ou diluía o ranking numa
+  // lista de sugestões, e a resposta que existe para exatamente isso nunca
+  // aparecia.
+  if (asksAboutPriceDiscrepancy(query)) {
+    const priceDifference = knowledgeItems.find(
+      ({ id, sourceType }) => sourceType === 'faq' && id === 'price-difference',
+    )
+    if (priceDifference) return toKnowledgeResult(priceDifference)
+  }
 
   if (context.live) {
     const liveAnswer = resolveLiveAnswer(query, rawQuery, context.live)

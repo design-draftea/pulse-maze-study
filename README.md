@@ -1,3 +1,14 @@
+> **RESEARCH ONLY**
+>
+> Este repositório é uma cópia independente do Draftea Pulse para testes no Maze.
+> Todos os preços, saldos e resultados são simulados.
+> Este código não deve ser usado em produção nem enviado de volta ao repositório principal.
+> Fonte do snapshot: design-draftea/pulse@a29313075fbafb6d5a1de76e818a1ae780a15acb
+>
+> Leia [RESEARCH_ONLY.md](RESEARCH_ONLY.md) antes de qualquer alteração.
+> Configuração da coleta em [docs/MAZE_SETUP.md](docs/MAZE_SETUP.md).
+> Plano da pesquisa em [docs/MAZE_STUDY_PLAN_PTBR.md](docs/MAZE_STUDY_PLAN_PTBR.md).
+
 # Pulse
 
 Protótipo mobile de prediction market de Bitcoin com rodadas contínuas de 15

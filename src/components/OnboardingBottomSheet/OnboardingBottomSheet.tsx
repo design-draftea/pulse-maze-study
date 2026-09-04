@@ -59,11 +59,18 @@ const restoreFocus = (target: HTMLElement | null) => {
 interface OnboardingBottomSheetProps {
   isOpen: boolean
   onClose: () => void
+  /**
+   * Disparado apenas pelo CTA final. Fechar no X ou arrastando chama `onClose`
+   * sem passar por aqui, e é essa distinção que o estudo mede: abrir o guia não
+   * é o mesmo que percorrê-lo até o fim.
+   */
+  onComplete?: () => void
 }
 
 export function OnboardingBottomSheet({
   isOpen,
   onClose,
+  onComplete,
 }: OnboardingBottomSheetProps) {
   const [shouldRender, setShouldRender] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
@@ -185,12 +192,13 @@ export function OnboardingBottomSheet({
 
   const handleAdvance = useCallback(() => {
     if (isLastAuthoredStep) {
+      onComplete?.()
       requestClose()
       return
     }
 
     goToStep(stepIndex + 1, 'forward')
-  }, [goToStep, isLastAuthoredStep, requestClose, stepIndex])
+  }, [goToStep, isLastAuthoredStep, onComplete, requestClose, stepIndex])
 
   if (!shouldRender || !step) return null
 

@@ -1,3 +1,9 @@
+import {
+  withStudyFaqOverrides,
+  withStudySmallTalkOverrides,
+  withStudyTopicOverrides,
+} from '../../../study/studyHelpContent.ts'
+
 export interface HelpFaqItem {
   answer: string
   examples: string[]
@@ -42,7 +48,7 @@ export interface HelpSmallTalkItem {
   withMenu: boolean
 }
 
-export const helpFaqItems: HelpFaqItem[] = [
+const baseHelpFaqItems: HelpFaqItem[] = [
   {
     id: 'what-is-pulse',
     question: '¿Qué es Draftea Pulse?',
@@ -356,7 +362,7 @@ export const helpProductItems: HelpProductItem[] = [
  * Promover um item para o glossário ou para as perguntas frequentes é mover o
  * objeto de lista, sem outra mudança.
  */
-export const helpTopicItems: HelpTopicItem[] = [
+const baseHelpTopicItems: HelpTopicItem[] = [
   {
     id: 'is-money-real',
     title: 'Saldo simulado',
@@ -556,7 +562,7 @@ export const helpTopicItems: HelpTopicItem[] = [
  * Conversa básica. Sem isso, `hola` e `gracias` caem no fallback de baixa
  * confiança, que é o pior primeiro contato possível com o assistente.
  */
-export const helpSmallTalkItems: HelpSmallTalkItem[] = [
+const baseHelpSmallTalkItems: HelpSmallTalkItem[] = [
   {
     id: 'greeting',
     answer: 'Hola. Soy el asistente de Pulse y respondo con la información de tu ronda y de tu cuenta. ¿Qué quieres saber?',
@@ -627,3 +633,13 @@ export const helpSmallTalkItems: HelpSmallTalkItem[] = [
     withMenu: true,
   },
 ]
+
+/**
+ * O catálogo publicado já sai com a sobreposição do estudo aplicada. Nesta
+ * cópia não existe um segundo modo de execução: o conteúdo simulado é o único
+ * conteúdo, então o ajuste acontece na exportação e vale para o assistente, o
+ * FAQ e o glossário ao mesmo tempo.
+ */
+export const helpFaqItems: HelpFaqItem[] = withStudyFaqOverrides(baseHelpFaqItems)
+export const helpTopicItems: HelpTopicItem[] = withStudyTopicOverrides(baseHelpTopicItems)
+export const helpSmallTalkItems: HelpSmallTalkItem[] = withStudySmallTalkOverrides(baseHelpSmallTalkItems)

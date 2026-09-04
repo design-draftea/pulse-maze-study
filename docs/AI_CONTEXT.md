@@ -1,5 +1,47 @@
 # Contexto compartilhado do Pulse
 
+> **Este repositório é o `pulse-maze-study`, não o Pulse principal.**
+>
+> Cópia independente e privada para o teste de usabilidade no Maze. Leia
+> [../RESEARCH_ONLY.md](../RESEARCH_ONLY.md) e
+> [../SOURCE_SNAPSHOT.md](../SOURCE_SNAPSHOT.md) antes de qualquer alteração.
+> Nada daqui volta para `design-draftea/pulse`.
+
+## Camada de estudo
+
+- `src/study/` é a única fonte de dados desta cópia. Nenhuma tela consulta
+  Polymarket, Chainlink, Coinbase, Kraken, Gamma ou CLOB; os hooks e serviços
+  dessas integrações foram removidos da árvore.
+- `studyScenarios.ts` prepara o cenário antes do primeiro render, a partir do
+  `?task=` da URL. Sem tarefa válida a aplicação mostra a tela de link inválido
+  em vez da Home.
+- `studyMarketRound.ts` mantém um relógio virtual: a rodada tem 15 minutos
+  conceituais, a pessoa entra com dez restantes e o contador para em cinco.
+  Nenhuma rodada vira durante uma missão do Maze.
+- `studyOutcomeMarket.ts` publica UP em 67% e DOWN em 33% a partir do cenário, e
+  não do ponto médio do livro: com spread de 6¢ entre compra e venda, o ponto
+  médio mostraria 64%.
+- `studyPriceSeries.ts` gera a série do gráfico por interpolação das oito
+  âncoras de `STUDY_PRICE_POINTS`, com ondulação de gerador semeado. Nenhum
+  `Math.random()` sem semente controla preço, evento visual ou resultado.
+- `studyMazeNavigation.ts` concentra `markMazeStep`, que reescreve a URL por
+  `replaceState` preservando `task` e o hash.
+- Todo o armazenamento vive sob `pulse.maze.v1`. As chaves do Pulse principal não
+  são lidas nem apagadas, e `localStorage.clear()` não é usado em lugar nenhum.
+- `studyHelpContent.ts` sobrepõe as três frases do catálogo que afirmavam que os
+  dados vêm de fontes de mercado, e reforça o vocabulário do FAQ
+  `price-difference`. A resposta aprovada desse FAQ não muda.
+- Comandos: `pnpm test:study` roda as seis suítes da pesquisa; `pnpm test` roda
+  todas. A auditoria de bundle em `tests/studyIsolation.test.mjs` precisa de um
+  `pnpm build` anterior para verificar o artefato.
+
+---
+
+O restante deste documento é o contexto herdado do Pulse principal no snapshot da
+cópia. Trechos sobre fontes de mercado, contingência e proxy descrevem o produto
+original, e não esta cópia.
+
+
 Este arquivo contém o contexto durável para Codex e Claude. Para o estado da tarefa atual, consulte [AI_HANDOFF.md](AI_HANDOFF.md).
 
 ## Produto
