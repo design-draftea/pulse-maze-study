@@ -58,45 +58,27 @@ const timeFormatter = new Intl.DateTimeFormat('es-MX', {
   timeZone: STUDY_TIME_ZONE,
 })
 
-/** Tempo decorrido na rodada, sem trava. Base dos dois relógios abaixo. */
-const getRawElapsedInRoundMs = (openedAt: number, now: number) => (
-  STUDY_ROUND_DURATION_MS
-  - STUDY_INITIAL_REMAINING_MS
-  + Math.max(0, now - openedAt)
-)
-
 /**
- * Relógio do contador.
+ * Relógio virtual da tarefa, único para o contador e para o mercado.
  *
- * A rodada tem 15 minutos conceituais e a pessoa entra com dez restantes. O
- * contador avança normalmente e para aos cinco minutos: nenhuma rodada pode
+ * A rodada tem 15 minutos conceituais e a pessoa entra com catorze restantes. O
+ * contador avança normalmente e só para faltando um minuto: nenhuma rodada pode
  * virar durante uma missão do Maze, senão o cenário se reiniciaria no meio da
  * compra e o participante veria números diferentes dos que a tarefa descreve.
+ *
+ * Contador e mercado compartilham este relógio de propósito. Separá-los abriria
+ * a chance de o gráfico desenhar um ponto num instante que o cabeçalho não
+ * reconhece; com um relógio só, o último ponto da série está sempre exatamente
+ * a um minuto do fim da rodada, que é o que o contador afirma.
  */
 export const getStudyElapsedInRoundMs = (
   openedAt: number,
   now: number,
 ): number => Math.min(
-  getRawElapsedInRoundMs(openedAt, now),
+  STUDY_ROUND_DURATION_MS
+  - STUDY_INITIAL_REMAINING_MS
+  + Math.max(0, now - openedAt),
   STUDY_ROUND_DURATION_MS - STUDY_FLOOR_REMAINING_MS,
-)
-
-/**
- * Relógio do mercado, deliberadamente separado do contador.
- *
- * O contador precisa parar para a rodada não virar, mas o preço não: amarrar os
- * dois ao mesmo limite congelava o gráfico e as cotações cinco minutos depois da
- * abertura, e um mercado parado não é o produto que o estudo quer medir. Aqui a
- * trava é a própria duração da rodada, então o preço caminha pelos 15 minutos
- * inteiros — dez minutos reais de missão — sem nunca desenhar um ponto depois do
- * fim da rodada, que faria o eixo do gráfico contradizer o horário exibido.
- */
-export const getStudyMarketElapsedMs = (
-  openedAt: number,
-  now: number,
-): number => Math.min(
-  getRawElapsedInRoundMs(openedAt, now),
-  STUDY_ROUND_DURATION_MS,
 )
 
 export const getStudyRemainingSeconds = (
@@ -112,15 +94,15 @@ export const buildStudyMarketRound = (
 ): StudyMarketRoundState => {
   const roundStart = getStudyRoundStart(scenario.openedAt)
   const roundEnd = roundStart + STUDY_ROUND_DURATION_MS
-  const marketElapsedMs = getStudyMarketElapsedMs(scenario.openedAt, now)
-  const virtualNow = roundStart + marketElapsedMs
+  const elapsedMs = getStudyElapsedInRoundMs(scenario.openedAt, now)
+  const virtualNow = roundStart + elapsedMs
   const remainingSeconds = getStudyRemainingSeconds(scenario.openedAt, now)
   const points = buildStudyRoundSeries(roundStart, virtualNow, scenario.id)
   // O preço exibido é o último ponto da série, e não um valor calculado à
   // parte: a ponta do gráfico, a etiqueta e o card `Precio actual` precisam
   // concordar em todo quadro.
   const currentPrice = points.at(-1)?.value
-    ?? getStudyPriceAt(marketElapsedMs, createStudyPriceNoise(scenario.id, 1))
+    ?? getStudyPriceAt(elapsedMs, createStudyPriceNoise(scenario.id, 1))
 
   return {
     now: virtualNow,

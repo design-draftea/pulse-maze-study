@@ -146,11 +146,18 @@ test('os números do assistente coincidem com a Home', async () => {
   assert.match(roundText, /80,000/)
   assert.match(roundText, /80,012\.40/)
 
-  // O contador do assistente é o mesmo relógio virtual da Home: dez minutos.
+  // O contador do assistente é o mesmo relógio virtual da Home.
   const time = ask('¿Cuánto tiempo queda en la ronda?', snapshot)
-  assert.match(time.answer, /Quedan 10:00/)
-  assert.equal(round.minutes, '10')
+  assert.match(time.answer, /Quedan 14:00/)
+  assert.equal(round.minutes, '14')
   assert.equal(round.seconds, '00')
+
+  const maisTardeNoRelogio = await buildStudySnapshotAt('help', 4 * 60_000)
+  const tempo = ask(
+    '¿Cuánto tiempo queda en la ronda?',
+    maisTardeNoRelogio.snapshot,
+  )
+  assert.match(tempo.answer, /Quedan 10:00/)
 })
 
 test('o assistente lê o saldo e a posição do cenário simulado', async () => {

@@ -32,13 +32,32 @@ export const STUDY_VALUES = {
 } as const
 
 export const STUDY_ROUND_DURATION_MS = 15 * 60 * 1000
-/** A pessoa entra com dez minutos restantes. */
-export const STUDY_INITIAL_REMAINING_MS = 10 * 60 * 1000
+
 /**
- * O contador para aos cinco minutos. Nenhuma rodada vira durante uma missão do
- * Maze, então o relógio nunca alcança zero e o cenário nunca se reinicia sozinho.
+ * A pessoa entra com catorze minutos restantes, ou seja, um minuto depois do
+ * início da rodada.
+ *
+ * Não é no minuto zero de propósito. Ali a rodada acabou de nascer e a série do
+ * gráfico tem um ponto só: o participante abriria o link e veria um ponto solto
+ * em vez de uma linha, justamente no primeiro quadro do estudo. Um minuto de
+ * rodada já enche várias vezes a janela visível do range `LIVE` e ainda deixa
+ * passado para arrastar, ao custo de um único minuto de contador.
  */
-export const STUDY_FLOOR_REMAINING_MS = 5 * 60 * 1000
+export const STUDY_INITIAL_REMAINING_MS = 14 * 60 * 1000
+
+/**
+ * O contador para faltando um minuto. Nenhuma rodada vira durante uma missão do
+ * Maze, então o relógio nunca alcança zero e o cenário nunca se reinicia sozinho.
+ *
+ * O piso é baixo por escolha. Um contador parado parece defeito, e quem fica
+ * mais tempo numa tarefa costuma ser quem está com dificuldade — exatamente a
+ * sessão que o estudo mais quer ler, e a que menos pode ser contaminada por uma
+ * tela que aparenta ter travado. Com este valor são treze minutos de contagem
+ * contínua, contra os um a três minutos que uma tarefa de Maze costuma durar.
+ * Fica acima dos cinco segundos em que o produto entra em estado de fechamento,
+ * então esse estado nunca é alcançado.
+ */
+export const STUDY_FLOOR_REMAINING_MS = 60 * 1000
 
 /** Deslocamento fixo entre o início da rodada e a abertura da tarefa. */
 export const STUDY_ROUND_ELAPSED_AT_OPEN_MS =

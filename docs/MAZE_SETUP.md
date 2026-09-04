@@ -115,6 +115,7 @@ Fixo, e seguro de citar em qualquer pergunta:
 |---|---|
 | Preço objetivo da rodada | US$80.000,00 |
 | Preço e percentuais na abertura | US$80.012,40 · UP 67% · DOWN 33% |
+| Contador na abertura | 14:00, andando até parar em 01:00 |
 | Saldo inicial | US$2.040,00 (US$2.030,00 na tarefa de venda) |
 | Monto da compra | US$10, então o saldo depois da compra é sempre US$2.030,00 |
 | Exemplo do onboarding | US$10 · 67¢ · 14,93 participações · US$14,93 · +US$4,93 |
@@ -129,12 +130,23 @@ Variável, e que **não** pode ser citado em pergunta nem em texto de tarefa:
 O exemplo do onboarding é ilustração estática no código, não dado de mercado:
 ele mostra sempre os mesmos números, mesmo com a Home atrás dele em 65%.
 
-O contador para em `05:00` e não volta a andar: é o que impede a rodada de virar
-no meio de uma missão. O mercado **não** para junto — preço, gráfico e cotações
-seguem até o fim dos 15 minutos conceituais da rodada, o que dá dez minutos reais
-de missão. Uma tarefa de Maze dura de um a três minutos, então nenhum
-participante alcança esse limite; se alguém deixar a aba aberta por mais tempo, o
-preço assenta e o contador continua marcando `05:00`.
+A tarefa abre com `14:00` no contador, ou seja, um minuto depois do início da
+rodada. Não é no minuto zero de propósito: ali a série do gráfico teria um ponto
+só, e o participante veria um ponto solto em vez de uma linha justamente no
+primeiro quadro do estudo. Um minuto de rodada já enche várias vezes a janela
+visível do range `LIVE`.
+
+O contador anda por treze minutos e para faltando `01:00`, que é o que impede a
+rodada de virar no meio de uma missão. Contador, preço e gráfico compartilham o
+mesmo relógio, então param juntos e o eixo do gráfico nunca contradiz o horário
+do cabeçalho.
+
+O piso é baixo por escolha. Um contador parado parece defeito, e quem fica mais
+tempo numa tarefa costuma ser quem está com dificuldade — exatamente a sessão que
+o estudo mais quer ler, e a que menos pode ser contaminada por uma tela que
+aparenta ter travado. Uma tarefa de Maze dura de um a três minutos, contra treze
+de contagem contínua. O piso também fica acima dos cinco segundos em que o
+produto entra em estado de fechamento, então esse estado nunca é alcançado.
 
 Duas garantias tornam isso seguro para a coleta. O preço é sempre um número
 inteiro de centavos, então o que a tela exibe é exatamente o que a execução

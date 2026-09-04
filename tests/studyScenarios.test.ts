@@ -148,47 +148,74 @@ test('tarefa ausente ou inválida não abre a Home', async () => {
   assert.equal(empty.resolution.status, 'invalid')
 })
 
-test('o relógio começa em 10 minutos, avança e para em 5', async () => {
+test('o relógio começa em 14 minutos e conta por treze deles', async () => {
   const opened = await open('?task=buy&mazeStep=start')
   const { scenario } = opened.resolution
   const { buildStudyMarketRound } = opened.round
 
   const atOpen = buildStudyMarketRound(scenario, OPENED_AT)
-  assert.equal(atOpen.remainingSeconds, 600)
-  assert.equal(atOpen.minutes, '10')
+  assert.equal(atOpen.remainingSeconds, 840)
+  assert.equal(atOpen.minutes, '14')
   assert.equal(atOpen.seconds, '00')
 
-  const afterOneMinute = buildStudyMarketRound(scenario, OPENED_AT + 60_000)
-  assert.equal(afterOneMinute.remainingSeconds, 540)
+  // Uma tarefa de Maze dura de um a três minutos: nesse intervalo o contador
+  // está sempre andando, que é o ponto de todo este ajuste.
+  assert.equal(
+    buildStudyMarketRound(scenario, OPENED_AT + 60_000).remainingSeconds,
+    780,
+  )
+  assert.equal(
+    buildStudyMarketRound(scenario, OPENED_AT + 3 * 60_000).remainingSeconds,
+    660,
+  )
+  assert.equal(
+    buildStudyMarketRound(scenario, OPENED_AT + 12 * 60_000).remainingSeconds,
+    120,
+  )
 
-  const afterFive = buildStudyMarketRound(scenario, OPENED_AT + 5 * 60_000)
-  assert.equal(afterFive.remainingSeconds, 300)
-
-  // O contador não encerra a rodada nem depois de meia hora de missão.
+  // O piso é de um minuto, e a rodada não vira nem depois de meia hora.
   const afterThirty = buildStudyMarketRound(scenario, OPENED_AT + 30 * 60_000)
-  assert.equal(afterThirty.remainingSeconds, 300)
+  assert.equal(afterThirty.remainingSeconds, 60)
   assert.equal(afterThirty.roundStart, atOpen.roundStart)
+  // Nunca alcança o estado de fechamento do produto, que começa em 5 segundos.
+  assert.ok(afterThirty.remainingSeconds > 5)
 })
 
-test('o contador para em 5:00, mas o mercado não para junto', async () => {
+test('o gráfico já tem linha no primeiro quadro', async () => {
+  const opened = await open('?task=buy&mazeStep=start')
+  const round = opened.round.buildStudyMarketRound(
+    opened.resolution.scenario,
+    OPENED_AT,
+  )
+
+  // A janela visível do range LIVE cobre cerca de 16 segundos. Entrar um minuto
+  // depois do início da rodada a enche várias vezes, então a primeira tela do
+  // estudo mostra uma linha, e não um ponto solto.
+  assert.ok(
+    round.points.length >= 60,
+    `só ${round.points.length} ponto(s) no primeiro quadro`,
+  )
+})
+
+test('o mercado anda durante toda a contagem', async () => {
   const opened = await open('?task=buy&mazeStep=start')
   const { scenario } = opened.resolution
   const { buildStudyMarketRound } = opened.round
 
-  // Cinco minutos de missão: é aqui que o contador trava.
-  const noPiso = buildStudyMarketRound(scenario, OPENED_AT + 5 * 60_000)
-  const depois = buildStudyMarketRound(scenario, OPENED_AT + 7 * 60_000)
-  const bemDepois = buildStudyMarketRound(scenario, OPENED_AT + 9 * 60_000)
+  const marcos = [0, 60_000, 3 * 60_000, 8 * 60_000, 12 * 60_000]
+    .map((offset) => buildStudyMarketRound(scenario, OPENED_AT + offset))
 
-  assert.equal(noPiso.remainingSeconds, 300)
-  assert.equal(depois.remainingSeconds, 300)
-  assert.equal(bemDepois.remainingSeconds, 300)
+  marcos.slice(1).forEach((marco, index) => {
+    const anterior = marcos[index]
 
-  // O preço continua caminhando e a série continua crescendo depois do piso.
-  assert.notEqual(depois.currentPrice, noPiso.currentPrice)
-  assert.notEqual(bemDepois.currentPrice, depois.currentPrice)
-  assert.ok(depois.points.length > noPiso.points.length)
-  assert.ok(bemDepois.points.length > depois.points.length)
+    assert.notEqual(
+      marco.currentPrice,
+      anterior.currentPrice,
+      'o preço parou durante a contagem',
+    )
+    assert.ok(marco.points.length > anterior.points.length)
+    assert.ok(marco.remainingSeconds < anterior.remainingSeconds)
+  })
 })
 
 test('o gráfico nunca desenha um ponto depois do fim da rodada', async () => {

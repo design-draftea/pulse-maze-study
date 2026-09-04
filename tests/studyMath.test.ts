@@ -133,17 +133,19 @@ test('na abertura, o saldo fecha em US$2.030,00 e depois em US$2.039,10', () => 
 // Invariantes que valem em qualquer instante da missão
 // ---------------------------------------------------------------------------
 
+/** Os treze minutos em que o contador anda, segundo a segundo. */
 const EVERY_SECOND_OF_THE_TASK = Array.from(
-  { length: 601 },
+  { length: 781 },
   (_, second) => second * 1_000,
 )
+const TASK_SECONDS = EVERY_SECOND_OF_THE_TASK.length
 
 test('o preço exibido é sempre um número inteiro de centavos', () => {
   EVERY_SECOND_OF_THE_TASK.forEach((elapsed) => {
     const { asks, bids } = deriveStudyOutcomePrices(
       getStudyPriceAt(
         STUDY_ROUND_ELAPSED_AT_OPEN_MS + elapsed,
-        createStudyPriceNoise('buy-maze-v1', 601),
+        createStudyPriceNoise('buy-maze-v1', TASK_SECONDS),
       ),
     )
 
@@ -207,12 +209,12 @@ test('as participações compradas continuam pagando US$1 cada', () => {
  * meio da tarefa — e o participante veria um erro que não existe no produto.
  */
 test('o preço nunca se move mais de 1¢ em três segundos', () => {
-  const noise = createStudyPriceNoise('buy-maze-v1', 601)
+  const noise = createStudyPriceNoise('buy-maze-v1', TASK_SECONDS)
   const priceAt = (second: number) => deriveStudyOutcomePrices(
     getStudyPriceAt(STUDY_ROUND_ELAPSED_AT_OPEN_MS + second * 1_000, noise),
   ).asks.up
 
-  for (let second = 0; second + 3 <= 600; second += 1) {
+  for (let second = 0; second + 3 < TASK_SECONDS; second += 1) {
     const move = Math.abs(priceAt(second + 3) - priceAt(second))
 
     assert.ok(
@@ -232,13 +234,13 @@ test('o mercado se move de verdade ao longo da missão', () => {
     `UP assumiu só ${observados.size} valor(es) em dez minutos`,
   )
   assert.ok(
-    observados.size <= 12,
+    observados.size <= 14,
     `UP assumiu ${observados.size} valores: instável demais para a tarefa`,
   )
 })
 
 test('o preço do Bitcoin se move e continua perto do objetivo', () => {
-  const noise = createStudyPriceNoise('buy-maze-v1', 601)
+  const noise = createStudyPriceNoise('buy-maze-v1', TASK_SECONDS)
   const precos = EVERY_SECOND_OF_THE_TASK.map((elapsed) => (
     getStudyPriceAt(STUDY_ROUND_ELAPSED_AT_OPEN_MS + elapsed, noise)
   ))
