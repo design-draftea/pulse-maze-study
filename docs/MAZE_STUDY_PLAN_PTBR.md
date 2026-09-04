@@ -117,8 +117,8 @@ Quão fácil ou difícil foi fazer a entrada?
 
 **Pergunta de múltipla escolha**
 
-A tela mostrou que, ao usar US$10, você receberia US$14,93 caso acertasse. O que
-representa esse valor?
+Ao usar US$10, a tela mostrou um valor em “Ganancia potencial”. O que esse valor
+representa?
 
 1. O valor total que eu receberia.
 2. Meu ganho, sem contar os US$10 utilizados.
@@ -128,13 +128,11 @@ representa esse valor?
 
 **Pergunta opcional de múltipla escolha**
 
-Nesse mesmo exemplo, qual seria o seu ganho?
+Esse valor em “Ganancia potencial” inclui os US$10 que você usou?
 
-1. US$4,93.
-2. US$10.
-3. US$14,93.
-4. US$0,67.
-5. Não tenho certeza.
+1. Sim, é o total que eu receberia: os US$10 mais o ganho.
+2. Não, é só o ganho, que viria além dos US$10.
+3. Não tenho certeza.
 
 ## Tarefa 3: venda
 
@@ -265,15 +263,33 @@ versão atual pergunta o que o percentual *indica*, sem valor, e as alternativas
 continuam sendo as mesmas confusões: variação de preço, retorno sobre o valor
 utilizado e ganho por participação.
 
-### A tarefa 2 ainda cita valores
+### A tarefa 2 também deixou de citar valores
 
-As duas perguntas sobre US$14,93 e US$4,93 continuam como no texto aprovado, e
-essas sim dependem do mercado: se ele se mover, quem comprar com UP em 65% verá
-US$15,38 e a pergunta fica errada para parte da amostra. Há uma versão sem
-números pronta para substituí-las quando essa decisão for tomada.
+As duas perguntas mencionavam US$14,93 e US$4,93. Diferente do caso do guia,
+esses valores vêm mesmo da cotação do instante da compra: com um mercado que se
+mova, quem comprar com UP em 65% vê US$15,38, e a pergunta fica factualmente
+errada para parte da amostra.
 
-Uma nota sobre a alternativa correta da mesma pergunta: o betslip do Pulse mostra
-um único número, e o rótulo dele é `Ganancia potencial`, embora o valor seja o
-total recebido. A alternativa 2 é a leitura que o rótulo induz e a 1 é a correta,
-então uma taxa alta na 2 diz algo sobre o rótulo, não sobre a atenção de quem
-respondeu.
+Agora as duas se apoiam no rótulo `Ganancia potencial`, que está sempre na tela,
+e não no número que ele carrega. A obrigatória continua testando a mesma
+confusão. A opcional deixou de ser uma conta e virou uma pergunta de inclusão:
+o valor mostrado já contém os US$10, ou vem além deles?
+
+O que se perde é a comparação exata entre participantes — não dá mais para dizer
+que alguém “acertou o US$14,93”. O que se mede passa a ser a relação entre os
+valores, que era o objetivo desde o começo: se a pessoa entende que o número na
+tela já inclui o que ela gastou.
+
+Com isso, nenhuma pergunta do estudo depende mais de um valor específico
+aparecer na tela. O plano funciona tanto com um mercado simulado parado quanto
+com um que se mova.
+
+### Como ler a resposta da tarefa 2
+
+O betslip do Pulse mostra um único número, sob o rótulo `Ganancia potencial`,
+embora o valor seja o total recebido e não o ganho. A alternativa 2 é a leitura
+que o rótulo induz; a 1 é a correta.
+
+Uma taxa alta na alternativa 2 não indica desatenção de quem respondeu: indica
+que o rótulo está ensinando a coisa errada. É um resultado acionável sobre o
+produto, e vale registrá-lo como tal na análise.
