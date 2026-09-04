@@ -10,6 +10,43 @@
 - Branch: `research/maze-v1`, criada a partir da `main` deste repositório
 - Snapshot da fonte: `design-draftea/pulse@a29313075fbafb6d5a1de76e818a1ae780a15acb`
 
+### Validação executada
+
+Suítes: 198 casos em 7 arquivos, todos passando. `pnpm lint` e `tsc -b` limpos.
+CI do Pull Request verde.
+
+Auditoria de rede: o bundle publicado não contém nenhum dos endpoints proibidos.
+Numa sessão de navegador que percorreu as quatro tarefas, os únicos recursos
+externos carregados foram a folha de estilo e as fontes do Google Fonts, que já
+faziam parte da identidade visual do Pulse. Nenhuma requisição a serviço de
+mercado.
+
+Navegador, com o artefato de produção servido localmente:
+
+- `task=onboarding` abre com saldo US$2.040,00, sem entradas e com o convite
+  pulsante. O guia marca `onboarding-open`, os quatro passos avançam, o card do
+  terceiro passo mostra US$10, 67¢, US$14,93 e +US$4,93, e só o CTA final marca
+  `onboarding-complete`.
+- `task=buy` marca `buy-betslip-open` ao escolher UP. O betslip mostra Monto
+  US$10,00, Precio promedio 67¢ e US$14,93. O gesto conclui, marca
+  `purchase-complete`, o saldo fecha em US$2.030,00 e a entrada aparece.
+- `task=sell` abre na Home com a posição já aberta. A Navbar leva a
+  `entries-open#entradas`, o card mostra Monto US$10, 67¢ e 14.93 participaciones,
+  o betslip de venda mostra 61¢ e US$9,10, e a confirmação marca
+  `sale-complete#entradas` com saldo US$2.039,10 e a posição encerrada.
+- `task=help` marca `assistant-open` pelo link da Home. A frase livre
+  `el precio de bitcoin aquí es diferente al de otra plataforma` resolve o FAQ
+  `price-difference` e marca `answer-shown`. O campo carrega `data-maze-mask="True"`.
+- Uma URL sem `task` mostra a tela de link inválido, e não a Home.
+- Viewports 320×568, 375×812, 390×844, 430×932 e 499×900: sem overflow
+  horizontal. O aviso `MobileOnly` continua oculto em 499px e aparece em 520px.
+- Nenhum erro ou aviso no console em nenhuma das tarefas.
+- O armazenamento ficou restrito a `pulse.maze.v1.market`, `.task`, `.onboarding`
+  e `.wallet`.
+
+Pendente de validação manual: aparelho físico iOS e Android, e o piloto dentro do
+Maze — este último depende do snippet e da URL publicada.
+
 ### Pendências que dependem de terceiros
 
 1. **Snippet do Maze** — não fornecido. Toda a instrumentação de URL está pronta
