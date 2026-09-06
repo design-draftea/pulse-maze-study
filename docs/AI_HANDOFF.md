@@ -1,6 +1,18 @@
 # Handoff entre Codex e Claude
 
-## Estado atual — encerramento automático do Maze
+## Estado atual — coluna mobile no desktop
+
+- Data: 2026-09-06. Branch: `fix/maze-desktop-frame`, criada de `origin/main` atualizada, checkout inicialmente limpo.
+- Objetivo: manter a experiência mobile íntegra dentro da janela desktop aberta pelo Maze.
+- Diagnóstico: transform na página inteira vinculava fixed à altura do documento; cards usavam 100vw da janela externa (2520px num viewport de 2560px). Fundo da coluna ficava interrompido abaixo dos 300px.
+- Implementação: remove transform do ancestral; limita controles fixos, portais e toasts à coluna de 390px; fundo preto contínuo; variável de largura para carrosséis e backgrounds sticky. Mobile abaixo de 500px preservado.
+- Arquivos: `src/App.css`, CSS de `HomeOpenEntries`, `PreviousRounds` e `OpenEntries`, `docs/AI_CONTEXT.md` e este handoff.
+- Decisão: não usar resizeTo. A documentação Maze exige 1180–1380px para tarefas desktop; reduzir para 390px pode acionar o bloqueio de tamanho. Fonte: https://help.maze.co/articles/1630964148-interacting-with-a-website-test
+- Validação local: lint e build passaram (aviso existente de chunk >500kB). Chrome em 390, 499, 500, 1180 e 1380px sem overflow horizontal; betslip mantém a mesma geometria vertical entre mobile e desktop. Scroll de 431px não move navbar/fundo fixos. Perfil e onboarding centralizados em 390px. Cards de rodadas em 350px na coluna de 390px.
+- Aceite verificado: largura, fundo contínuo, carrossel, ancoragem dos controles, perfil e onboarding. Não houve PR, merge ou deploy desta correção; falta revisão da pessoa usuária e validação no Maze após publicação autorizada.
+- URL local: http://127.0.0.1:5193/
+
+## Histórico — encerramento automático do Maze (PR #11 publicado)
 
 - Data: 2026-09-06. Branch: `fix/maze-auto-end`, criada da `origin/main` atualizada; checkout inicialmente limpo.
 - Objetivo: acionar o botão real de encerramento do Website Test nos quatro marcos finais, sem encerrar o editor de paths nem URLs de sucesso abertas diretamente.
@@ -9,8 +21,8 @@
 - Decisões: arma somente com `lwt` e widget de participante; intenção em sessionStorage expira em 30s e é consumida uma vez após recarga; URL deve coincidir. Aguarda botão estável por 2s, limita tentativas a 15s; sem widget, texto reconhecido ou acesso ao storage, mantém encerramento manual.
 - Validação automatizada: 11 novos cenários cobrem quatro marcos, clique único, URL direta, editor, storage bloqueado, navegação, expiração, botão desabilitado e texto desconhecido.
 - Validação local: `pnpm test:maze` (34 testes), `pnpm lint`, `pnpm build` e `git diff --check` passaram; aviso já existente de chunk >500 kB. No Chrome, harness temporário com iframe simulado confirmou recarga e exatamente um clique automático; harness removido. Isso não comprova integração com o widget real nem classificação do path.
-- Pendência: validar preview real e classificação dos paths após publicação autorizada. A espera de 2s não é confirmação de upload pelo Maze. Não houve commit, PR, merge ou deploy.
-- Próximo passo: revisar a alteração local, publicar com autorização e testar os quatro fluxos no Maze.
+- PR #11 mesclado e deploy 34065716592 concluído com sucesso. Os quatro fluxos avançaram automaticamente no preview real do Chrome Draftea. A classificação dos paths nos relatórios foi adiada pela pessoa usuária; o preview não salva respostas.
+
 
 
 ## Histórico anterior: persistência do gráfico

@@ -13,20 +13,42 @@
  * Abaixo disso nada muda: no aparelho do participante a coluna é a tela
  * inteira, e a experiência é exatamente a de hoje.
  *
- * O `transform` não é decorativo. Um ancestral transformado vira o bloco de
- * contenção dos descendentes `position: fixed` — o fundo, a barra de escolha
- * UP/DOWN e a navbar —, que sem isso continuariam ancorados na janela e
- * atravessariam a tela toda.
+ * Elementos fixos continuam presos ao viewport. Transformar a página inteira
+ * os prende à altura do documento, fazendo controles sumirem durante o scroll.
  */
 @media (min-width: 500px) {
   body {
     background-color: #0a0d14;
   }
 
+  :root {
+    --pulse-layout-width: 390px;
+  }
+
   .pulse-app {
     width: 390px;
     margin-inline: auto;
-    transform: translateZ(0);
+    background-color: #000;
+  }
+
+  .pulse-app .pulse-app__background,
+  .pulse-app .pulse-app__route,
+  .pulse-app .market-choice,
+  .pulse-app .buy-betslip,
+  .pulse-app .navbar-container,
+  .pulse-app__interaction-lock,
+  .profile-sheet__container,
+  .onboarding-sheet__container,
+  .quick-amount-sheet__container,
+  .movement-detail-modal__container,
+  .info-modal__container {
+    max-width: var(--pulse-layout-width);
+    margin-inline: auto;
+  }
+
+  .purchase-success-toast,
+  .round-win-toast {
+    max-width: calc(var(--pulse-layout-width) - 24px);
   }
 }
 
@@ -128,7 +150,7 @@
   background-image: url('./assets/bgHeader.webp');
   background-repeat: no-repeat;
   background-position: center top;
-  background-size: max(100vw, 391px) auto;
+  background-size: max(var(--pulse-layout-width, 100vw), 391px) auto;
   content: '';
   pointer-events: none;
 }

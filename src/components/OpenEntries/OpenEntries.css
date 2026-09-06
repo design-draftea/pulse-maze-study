@@ -24,7 +24,7 @@
   background-image: url('../../assets/bgHeader.webp');
   background-repeat: no-repeat;
   background-position: center top;
-  background-size: max(100vw, 391px) auto;
+  background-size: max(var(--pulse-layout-width, 100vw), 391px) auto;
 }
 
 .open-entries__tabs::before {
