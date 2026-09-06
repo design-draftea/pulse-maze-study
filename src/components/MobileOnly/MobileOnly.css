@@ -9,10 +9,19 @@
   padding: 40px;
 }
 
-@media (min-width: 500px) {
-  .mobile-only {
-    display: flex;
-  }
+/*
+ * O aviso não é mais exibido nesta cópia.
+ *
+ * O Maze grava o caminho do Website Test numa janela de tamanho desktop, e não
+ * há configuração que a estreite. Com o bloqueio ativo, a gravação capturava
+ * esta tela em vez do produto, e a tarefa ficava impossível de configurar.
+ *
+ * O componente permanece montado de propósito: ele veio do Pulse principal e
+ * some sozinho quando esta cópia for sincronizada de novo. Escondê-lo por CSS
+ * mantém a diferença em um lugar só.
+ */
+.mobile-only {
+  display: none;
 }
 
 .mobile-only__content {
