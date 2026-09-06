@@ -105,7 +105,7 @@ export interface OpenEntryExit {
 
 const TAB_FADE_OUT_MS = 110
 const TAB_FADE_IN_MS = 180
-type EntriesTab = 'open' | 'won' | 'past'
+export type EntriesTab = 'open' | 'won' | 'past'
 type TabTransitionPhase = 'idle' | 'out' | 'in'
 
 const formatPrice = (value: number | null) => (
@@ -368,6 +368,8 @@ interface OpenEntriesProps {
   onExitEnd?: () => void
   onViewMarket: () => void
   onSell: (side: OutcomeSide) => void
+  /** Avisa a troca de aba. Só dispara quando a aba muda de fato. */
+  onTabSelect?: (tab: EntriesTab) => void
 }
 
 export function OpenEntries({
@@ -384,6 +386,7 @@ export function OpenEntries({
   onExitEnd,
   onViewMarket,
   onSell,
+  onTabSelect,
 }: OpenEntriesProps) {
   const [activeTab, setActiveTab] = useState<EntriesTab>('open')
   const [tabTransitionPhase, setTabTransitionPhase] = useState<TabTransitionPhase>('idle')
@@ -439,6 +442,8 @@ export function OpenEntries({
 
   const selectTab = (nextTab: EntriesTab) => {
     if (nextTab === activeTab || tabTransitionPhase !== 'idle') return
+
+    onTabSelect?.(nextTab)
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setActiveTab(nextTab)

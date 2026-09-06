@@ -23,7 +23,10 @@ import {
 import { MobileOnly } from './components/MobileOnly/MobileOnly'
 import { Movements } from './components/Movements/Movements'
 import { OnboardingBottomSheet } from './components/OnboardingBottomSheet'
-import { OpenEntries } from './components/OpenEntries/OpenEntries'
+import {
+  OpenEntries,
+  type EntriesTab,
+} from './components/OpenEntries/OpenEntries'
 import {
   Navbar,
   type NavbarItemId,
@@ -739,6 +742,13 @@ function App() {
     setSelectedSide(side)
   }, [])
 
+  // A tarefa de acompanhamento termina em `Pasadas`. As outras abas não marcam
+  // nada: chegar em `Entradas` já tem o seu próprio marco, e o que se mede aqui
+  // é encontrar o histórico, não a seção.
+  const handleEntriesTabSelect = useCallback((tab: EntriesTab) => {
+    if (tab === 'past') markMazeStep('past-entries-open')
+  }, [])
+
   const handleEntrySell = useCallback((side: MarketSide) => {
     markMazeStep('sell-betslip-open')
     setBetslipInitialOperationMode('sell')
@@ -965,6 +975,7 @@ function App() {
               settledEntries={settledEntries}
               exitingEntry={saleExit}
               onExitEnd={handleSaleExitEnd}
+              onTabSelect={handleEntriesTabSelect}
               onViewMarket={() => handleNavigate('home')}
               onSell={handleEntrySell}
             />

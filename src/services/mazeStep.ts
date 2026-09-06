@@ -14,8 +14,7 @@ export type MazeStep =
   | 'entries-open'
   | 'sell-betslip-open'
   | 'sale-complete'
-  | 'assistant-open'
-  | 'answer-shown'
+  | 'past-entries-open'
 
 export const MAZE_STEP_PARAM = 'mazeStep'
 
