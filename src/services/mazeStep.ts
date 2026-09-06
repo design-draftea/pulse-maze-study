@@ -19,6 +19,21 @@ export type MazeStep =
 export const MAZE_STEP_PARAM = 'mazeStep'
 
 /**
+ * Parâmetros do estudo, na ordem em que devem aparecer.
+ *
+ * O Maze compara URLs como texto, e o `URLSearchParams.set` acrescenta no fim.
+ * Isso produzia endereços diferentes para o mesmo estado: durante o teste o Maze
+ * abre a página com o `lwt` dele e o nosso passo entrava depois; ao abrir o link
+ * de sucesso direto, a ordem se invertia. O caminho gravado deixava de bater com
+ * o percorrido, e a tarefa não fechava.
+ *
+ * Reconstruindo a query com os nossos parâmetros na frente, o mesmo ponto da
+ * mesma tarefa produz sempre o mesmo texto, independentemente de o Maze ter
+ * chegado antes ou depois.
+ */
+const STUDY_PARAM_ORDER = ['task', MAZE_STEP_PARAM] as const
+
+/**
  * Reescreve a URL preservando o hash da navegação interna e trocando apenas o
  * `mazeStep`. Nada dinâmico entra aqui — sem identificador de participante, sem
  * horário, sem valor de carteira —, então duas pessoas no mesmo ponto da mesma
@@ -27,8 +42,25 @@ export const MAZE_STEP_PARAM = 'mazeStep'
  */
 export const buildMazeStepUrl = (href: string, step: MazeStep) => {
   const url = new URL(href)
+  const previous = new URLSearchParams(url.search)
 
-  url.searchParams.set(MAZE_STEP_PARAM, step)
+  previous.set(MAZE_STEP_PARAM, step)
+
+  const next = new URLSearchParams()
+
+  STUDY_PARAM_ORDER.forEach((param) => {
+    const value = previous.get(param)
+    if (value !== null) next.set(param, value)
+  })
+
+  // O que o Maze acrescentou vem depois, na ordem em que chegou.
+  previous.forEach((value, key) => {
+    if (!(STUDY_PARAM_ORDER as readonly string[]).includes(key)) {
+      next.set(key, value)
+    }
+  })
+
+  url.search = next.toString()
   return url.toString()
 }
 

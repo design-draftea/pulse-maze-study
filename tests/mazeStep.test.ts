@@ -133,3 +133,51 @@ test('a venda preserva o hash de Entradas junto do parâmetro da tarefa', () => 
     `${BASE}?task=sell&mazeStep=sale-complete#entradas`,
   )
 })
+
+// ---------------------------------------------------------------------------
+// Ordem dos parâmetros
+// ---------------------------------------------------------------------------
+
+/**
+ * O Maze compara URLs como texto e acrescenta o `lwt` dele por conta própria.
+ * Se o nosso passo entrasse depois dele durante o teste, e antes dele ao abrir o
+ * link direto, o caminho gravado nunca bateria com o percorrido.
+ */
+test('o passo vem antes do que o Maze acrescenta, venha ele antes ou depois', () => {
+  const mazeAbriuPrimeiro = buildMazeStepUrl(
+    `${BASE}?lwt=true`,
+    'purchase-complete',
+  )
+  const linkAbertoDireto = buildMazeStepUrl(
+    `${BASE}?mazeStep=purchase-complete&lwt=true`,
+    'purchase-complete',
+  )
+
+  assert.equal(mazeAbriuPrimeiro, `${BASE}?mazeStep=purchase-complete&lwt=true`)
+  assert.equal(linkAbertoDireto, mazeAbriuPrimeiro)
+})
+
+test('a tarefa vem antes do passo, e os dois antes do resto', () => {
+  assert.equal(
+    buildMazeStepUrl(`${BASE}?lwt=true&task=sell`, 'sale-complete'),
+    `${BASE}?task=sell&mazeStep=sale-complete&lwt=true`,
+  )
+})
+
+test('a ordem é a mesma qualquer que seja a de chegada', () => {
+  const ordens = [
+    `${BASE}?lwt=true&task=sell&mazeStep=entries-open`,
+    `${BASE}?task=sell&lwt=true&mazeStep=entries-open`,
+    `${BASE}?mazeStep=entries-open&task=sell&lwt=true`,
+  ].map((href) => buildMazeStepUrl(href, 'sale-complete'))
+
+  assert.equal(new Set(ordens).size, 1)
+  assert.equal(ordens[0], `${BASE}?task=sell&mazeStep=sale-complete&lwt=true`)
+})
+
+test('sem parâmetros do Maze, a URL continua enxuta', () => {
+  assert.equal(
+    buildMazeStepUrl(BASE, 'onboarding-complete'),
+    `${BASE}?mazeStep=onboarding-complete`,
+  )
+})
