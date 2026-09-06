@@ -87,13 +87,13 @@ Com suas próprias palavras, como funciona uma rodada no Draftea Pulse?
 
 **Pergunta de múltipla escolha**
 
-Na explicação “Cómo funciona Draftea Pulse”, UP e DOWN aparecem com um
-percentual. O que esse percentual indica?
+Na explicação “Cómo funciona Draftea Pulse”, UP aparece em 67%. O que isso
+significa?
 
-1. O preço de cada participação.
-2. Quanto o preço do Bitcoin precisa subir ou cair.
-3. A parte do valor utilizado que eu receberia de volta.
-4. O meu ganho em cada participação.
+1. Cada participação custa US$0,67.
+2. O Bitcoin precisa subir 67%.
+3. Vou receber 67% do valor utilizado.
+4. Meu ganho será de US$0,67.
 5. Não tenho certeza.
 
 **Escala**
@@ -271,18 +271,27 @@ receberá perguntas sobre algo que não viu. O bloco de Website Test do Maze tem
 condição em `mazeStep=onboarding-complete` mostraria as duas apenas a quem de
 fato percorreu a explicação. Vale avaliar antes da coleta.
 
-### A tarefa 1 não cita mais o percentual
+### Por que a tarefa 1 volta a citar 67%
 
-A pergunta de múltipla escolha dizia “o que significa UP estar em 67%”. O número
-em si não corria
-risco: o exemplo do guia é texto fixo no componente, e não dado de mercado, então
-mostra 67% independentemente das cotações.
+A pergunta de múltipla escolha chegou a ser reescrita sem o número, por medo de
+ambiguidade: ao fechar a explicação, o participante encontra a Home com outro
+percentual, e a pergunta não dizia a qual dos dois se referia.
 
-O problema era outro. Ao fechar o guia, o participante encontra a Home com um
-percentual diferente — e a pergunta não dizia a qual dos dois se referia. A
-versão atual pergunta o que o percentual *indica*, sem valor, e as alternativas
-continuam sendo as mesmas confusões: variação de preço, retorno sobre o valor
-utilizado e ganho por participação.
+A reescrita saiu pior. Sem o valor, a alternativa correta virou “o preço de cada
+participação” — verdadeira, mas abstrata, e sem a ligação que a pergunta existe
+para testar: **67% e 67¢ são o mesmo número**. É isso que o terceiro passo da
+explicação ensina, e o título dele é literalmente `El % indica el precio`.
+
+Nomear a tela resolveu a ambiguidade sem custo, então o texto aprovado volta
+inteiro. O valor é seguro de citar: o card do onboarding é texto fixo no
+componente — `67%`, `67¢`, `14.93 participaciones`, `US$14,93` e `+US$4,93` —, e
+não dado de mercado. Se algum dia esse exemplo passar a usar cotação real, esta
+pergunta precisa ser revista junto.
+
+Sobre as alternativas: a correta é a **1**. A 2 lê o percentual como variação
+exigida do Bitcoin, a 3 como retorno sobre o valor utilizado e a 4 como ganho por
+participação. As três são leituras plausíveis para quem não fez a ligação entre o
+percentual e o preço, e é isso que as torna úteis.
 
 ### A tarefa 2 também deixou de citar valores
 
