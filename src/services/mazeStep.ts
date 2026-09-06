@@ -85,6 +85,61 @@ export const MAZE_COMPLETION_STEPS: ReadonlySet<MazeStep> = new Set([
  */
 export const MAZE_COMPLETION_RELOAD_DELAY_MS = 1_200
 
+const AUTO_END_KEY = 'pulse.maze-auto-end.v1'
+const TESTER_FRAME_ID = 'maze-tester-widget'
+const END_LABELS = new Set(['encerrar tarefa', 'end task', 'finalizar tarea', 'terminar tarea'])
+
+/** Integração não oficial: usa o controle real do widget, sem forjar resultados. */
+export const findMazeEndButton = (doc: Document): HTMLButtonElement | undefined => {
+  try {
+    // O editor de paths usa outro iframe: nunca deve ser encerrado aqui.
+    const frame = doc.getElementById(TESTER_FRAME_ID) as HTMLIFrameElement | null
+    const buttons = frame?.contentDocument?.querySelectorAll('button')
+    return buttons ? Array.from(buttons).find((button) => (
+      !button.disabled && END_LABELS.has((button.textContent ?? '').trim().toLowerCase())
+    )) : undefined
+  } catch {
+    // Uma mudança de origem/implementação no Maze mantém o encerramento manual.
+    return undefined
+  }
+}
+
+/** Consome somente uma conclusão real armada antes da recarga nesta aba. */
+export const resumeMazeAutoEnd = () => {
+  let pending: { href: string; createdAt: number }
+  try {
+    const raw = window.sessionStorage.getItem(AUTO_END_KEY)
+    window.sessionStorage.removeItem(AUTO_END_KEY)
+    if (!raw) return
+    pending = JSON.parse(raw)
+  } catch { return }
+  const href = window.location.href
+  const step = getMazeStep(href)
+  if (!pending || pending.href !== href || !Number.isFinite(pending.createdAt)
+    || Date.now() - pending.createdAt < 0 || Date.now() - pending.createdAt > 30_000
+    || !step || !MAZE_COMPLETION_STEPS.has(step as MazeStep)) return
+
+  const deadline = Date.now() + 15_000
+  let candidate: HTMLButtonElement | undefined
+  let readySince = 0
+  const poll = () => {
+    if (window.location.href !== href || Date.now() > deadline) return
+    const button = findMazeEndButton(document)
+    if (button !== candidate) {
+      candidate = button
+      readySince = Date.now()
+    }
+    // Dá tempo ao snippet após a recarga. Não é confirmação de upload do Maze;
+    // a classificação do path ainda exige validação no estudo publicado.
+    if (button && Date.now() - readySince >= 2_000) {
+      button.click()
+      return
+    }
+    window.setTimeout(poll, 250)
+  }
+  poll()
+}
+
 /**
  * Marca o passo na URL.
  *
@@ -97,7 +152,8 @@ export const MAZE_COMPLETION_RELOAD_DELAY_MS = 1_200
  * `pushState` nem `replaceState` — os dois estão nativos na página — e a
  * documentação deles diz que, numa aplicação de página única, uma URL alterada
  * sem recarregamento não é detectada. Sem um carregamento de verdade, o
- * participante chega ao fim da tarefa e o bloco nunca fecha.
+ * marco final pode deixar de ser registrado. A recarga não encerra a missão:
+ * no Website Test isso depende do botão End task.
  *
  * Então o último passo reescreve a URL e recarrega. O custo é a tela piscar uma
  * vez, no instante em que a tarefa já terminou; a carteira e o onboarding vivem
@@ -114,6 +170,17 @@ export const markMazeStep = (step: MazeStep) => {
   )
 
   if (!MAZE_COMPLETION_STEPS.has(step)) return
+
+  try {
+    window.sessionStorage.removeItem(AUTO_END_KEY)
+    if (new URL(window.location.href).searchParams.has('lwt')
+      && document.getElementById(TESTER_FRAME_ID)) {
+      window.sessionStorage.setItem(AUTO_END_KEY, JSON.stringify({
+        href: window.location.href,
+        createdAt: Date.now(),
+      }))
+    }
+  } catch { /* Armazenamento bloqueado: o botão manual continua disponível. */ }
 
   window.setTimeout(
     () => window.location.reload(),
