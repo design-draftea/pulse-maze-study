@@ -67,6 +67,7 @@ import {
 import type { HelpAssistantActionId } from './services/helpAssistant'
 import { buildHelpAssistantSnapshot } from './services/helpAssistantSnapshot'
 import { markMazeStep } from './services/mazeStep'
+import { useSeededSellEntry } from './hooks/useSeededSellEntry'
 import './App.css'
 
 const MARKET_HEADER_COMPACT_SCROLL_Y = 80
@@ -189,6 +190,16 @@ function App() {
         }
       : outcomeMarket
   ), [outcomeMarket])
+  // A tarefa de venda precisa que a pessoa chegue com uma entrada aberta. Quem
+  // vem da tarefa de compra já tem a sua, e é essa que ela vende; quem abriu o
+  // link direto recebe uma equivalente, feita pelo mesmo caminho de código.
+  useSeededSellEntry({
+    hasOpenPosition: currentPosition.up > 0 || currentPosition.down > 0,
+    quoteBuy: outcomeMarket.quoteBuy,
+    roundStart: marketRound.roundStart,
+    purchase,
+  })
+
   const currentRoundMarketValueCents = useMemo(() => {
     let totalValueCents = 0
 
@@ -251,6 +262,9 @@ function App() {
     : String(previewRemainingSeconds).padStart(2, '0')
 
   const commitSectionChange = useCallback((nextSection: AppSection) => {
+    // A tarefa de venda começa na Home de propósito: encontrar `Entradas` faz
+    // parte do que se mede, então este marco separa procurar de encontrar.
+    if (nextSection === 'entries') markMazeStep('entries-open')
     activeSectionRef.current = nextSection
     resetScrollTop()
     if (nextSection === 'home') {
@@ -697,7 +711,9 @@ function App() {
     // considera a compra feita quando vê a confirmação, e cortar a tarefa dois
     // segundos antes tiraria esse momento da gravação — que é justamente o que a
     // pergunta seguinte, sobre facilidade, pede para ele avaliar.
-    if (details.operation === 'buy') markMazeStep('purchase-complete')
+    markMazeStep(
+      details.operation === 'sell' ? 'sale-complete' : 'purchase-complete',
+    )
     setPurchaseSuccess(details)
     if (details.operation === 'sell') {
       setSaleExit((current) => (
@@ -719,6 +735,7 @@ function App() {
   }, [])
 
   const handleEntrySell = useCallback((side: MarketSide) => {
+    markMazeStep('sell-betslip-open')
     setBetslipInitialOperationMode('sell')
     setSelectedSide(side)
   }, [])

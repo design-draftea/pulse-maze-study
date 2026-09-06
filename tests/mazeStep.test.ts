@@ -103,3 +103,42 @@ test('a URL é a mesma para todo participante no mesmo ponto', () => {
   assert.equal(primeiro, segundo)
   assert.equal(getMazeStep(primeiro), 'purchase-complete')
 })
+
+// ---------------------------------------------------------------------------
+// URL da tarefa de venda
+// ---------------------------------------------------------------------------
+
+test('a URL da venda é reconhecida pelo parâmetro da tarefa', async () => {
+  const { isSellTaskUrl } = await import('../src/hooks/useSeededSellEntry.ts')
+
+  assert.equal(isSellTaskUrl(`${BASE}?task=sell`), true)
+  assert.equal(isSellTaskUrl(`${BASE}?task=sell&mazeStep=entries-open`), true)
+  assert.equal(isSellTaskUrl(BASE), false)
+  assert.equal(isSellTaskUrl(`${BASE}?task=buy`), false)
+})
+
+/**
+ * O parâmetro da tarefa precisa sobreviver a cada marco, senão a semeadura da
+ * entrada deixaria de valer no meio da missão e a URL de sucesso mudaria de
+ * forma no meio do caminho.
+ */
+test('o parâmetro da tarefa sobrevive à marcação dos passos', () => {
+  const fake = installWindow(`${BASE}?task=sell`)
+
+  markMazeStep('entries-open')
+  assert.equal(fake.location.href, `${BASE}?task=sell&mazeStep=entries-open`)
+
+  markMazeStep('sale-complete')
+  assert.equal(fake.location.href, `${BASE}?task=sell&mazeStep=sale-complete`)
+})
+
+test('a venda preserva o hash de Entradas junto do parâmetro da tarefa', () => {
+  const fake = installWindow(`${BASE}?task=sell&mazeStep=entries-open#entradas`)
+
+  markMazeStep('sale-complete')
+
+  assert.equal(
+    fake.location.href,
+    `${BASE}?task=sell&mazeStep=sale-complete#entradas`,
+  )
+})
