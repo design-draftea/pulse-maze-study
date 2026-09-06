@@ -693,6 +693,11 @@ function App() {
   const handleSaleExitEnd = useCallback(() => setSaleExit(null), [])
 
   const handleBetslipSuccess = useCallback((details: BetslipSuccessDetails) => {
+    // Marcado aqui, e não no instante em que a carteira muda: o participante só
+    // considera a compra feita quando vê a confirmação, e cortar a tarefa dois
+    // segundos antes tiraria esse momento da gravação — que é justamente o que a
+    // pergunta seguinte, sobre facilidade, pede para ele avaliar.
+    if (details.operation === 'buy') markMazeStep('purchase-complete')
     setPurchaseSuccess(details)
     if (details.operation === 'sell') {
       setSaleExit((current) => (
@@ -708,6 +713,7 @@ function App() {
   }, [])
 
   const handleMarketSideSelect = useCallback((side: MarketSide) => {
+    markMazeStep('buy-betslip-open')
     setBetslipInitialOperationMode('buy')
     setSelectedSide(side)
   }, [])
