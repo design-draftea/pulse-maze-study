@@ -82,8 +82,8 @@
   position: relative;
   isolation: isolate;
   display: flex;
-  width: calc(100vw - 40px);
-  min-width: calc(100vw - 40px);
+  width: calc(var(--pulse-layout-width, 100vw) - 40px);
+  min-width: calc(var(--pulse-layout-width, 100vw) - 40px);
   height: 116px;
   flex-direction: column;
   justify-content: center;
@@ -105,8 +105,8 @@
    já alargar durante a saída da outra, e não depois dela. */
 .home-open-entries[data-staying-count='1'] .home-open-entry-card:not(.home-open-entry-card--leaving),
 .home-open-entries[data-staying-count='0'] .home-open-entry-card {
-  width: calc(100vw - 32px);
-  min-width: calc(100vw - 32px);
+  width: calc(var(--pulse-layout-width, 100vw) - 32px);
+  min-width: calc(var(--pulse-layout-width, 100vw) - 32px);
 }
 
 /* Mesma composição de `PreviousRounds`: a estrutura reserva 1px transparente e
@@ -431,6 +431,6 @@
   }
 
   to {
-    margin-inline-end: calc(32px - 100vw);
+    margin-inline-end: calc(32px - var(--pulse-layout-width, 100vw));
   }
 }
