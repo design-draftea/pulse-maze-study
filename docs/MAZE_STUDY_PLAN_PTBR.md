@@ -87,7 +87,8 @@ Com suas próprias palavras, como funciona uma rodada no Draftea Pulse?
 
 **Pergunta de múltipla escolha**
 
-No guia, UP e DOWN aparecem com um percentual. O que esse percentual indica?
+Na explicação “Cómo funciona Draftea Pulse”, UP e DOWN aparecem com um
+percentual. O que esse percentual indica?
 
 1. O preço de cada participação.
 2. Quanto o preço do Bitcoin precisa subir ou cair.
@@ -97,7 +98,8 @@ No guia, UP e DOWN aparecem com um percentual. O que esse percentual indica?
 
 **Escala**
 
-Quanto o guia ajudou você a entender como o Pulse funciona?
+Quanto a explicação “Cómo funciona Draftea Pulse” ajudou você a entender o
+produto?
 
 1 significa “não ajudou”.
 7 significa “ajudou muito”.
@@ -254,9 +256,25 @@ Agradecemos pelo seu tempo e pela contribuição.
 
 ## Observação para a revisão
 
+### As perguntas da tarefa 1 chamam a explicação pelo nome que está na tela
+
+O texto dizia “o guia”. O app nunca usa essa palavra: tanto o botão de
+interrogação quanto o título do bottom sheet dizem **Cómo funciona Draftea
+Pulse**. Perguntar sobre “o guia” obriga o participante a adivinhar a que nos
+referimos — ou pior, sugere que existia algo que ele deveria ter encontrado.
+
+Fica em aberto um ponto que o nome não resolve: as duas perguntas assumem que a
+pessoa abriu a explicação. A tarefa pede para descobrir como o produto funciona,
+não para abrir a interrogação, então quem explorar o app por conta própria
+receberá perguntas sobre algo que não viu. O bloco de Website Test do Maze tem
+`Conditions`, que permite pular perguntas conforme o caminho percorrido: uma
+condição em `mazeStep=onboarding-complete` mostraria as duas apenas a quem de
+fato percorreu a explicação. Vale avaliar antes da coleta.
+
 ### A tarefa 1 não cita mais o percentual
 
-A pergunta dizia “o que significa UP estar em 67%”. O número em si não corria
+A pergunta de múltipla escolha dizia “o que significa UP estar em 67%”. O número
+em si não corria
 risco: o exemplo do guia é texto fixo no componente, e não dado de mercado, então
 mostra 67% independentemente das cotações.
 
