@@ -5,6 +5,31 @@
   overflow-x: clip;
 }
 
+/*
+ * Moldura de celular para janelas largas.
+ *
+ * O protótipo é desenhado para o polegar e estica mal numa tela grande, então
+ * acima de 500px ele passa a ocupar uma coluna centrada de largura de celular.
+ * Abaixo disso nada muda: no aparelho do participante a coluna é a tela
+ * inteira, e a experiência é exatamente a de hoje.
+ *
+ * O `transform` não é decorativo. Um ancestral transformado vira o bloco de
+ * contenção dos descendentes `position: fixed` — o fundo, a barra de escolha
+ * UP/DOWN e a navbar —, que sem isso continuariam ancorados na janela e
+ * atravessariam a tela toda.
+ */
+@media (min-width: 500px) {
+  body {
+    background-color: #0a0d14;
+  }
+
+  .pulse-app {
+    width: 390px;
+    margin-inline: auto;
+    transform: translateZ(0);
+  }
+}
+
 .pulse-app__background {
   position: fixed;
   z-index: -1;
