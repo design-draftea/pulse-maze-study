@@ -1,4 +1,4 @@
-name: Deploy Pulse to GitHub Pages
+name: Deploy Pulse Maze Study
 
 on:
   push:
@@ -43,13 +43,14 @@ jobs:
           pnpm test:proxy
           pnpm test:wallet
           pnpm test:entries
+          pnpm test:maze
 
       - name: Lint
         run: pnpm lint
 
       - name: Build GitHub Pages artifact
         env:
-          VITE_BASE_PATH: /pulse/
+          VITE_BASE_PATH: /pulse-maze-study/
           VITE_POLYMARKET_PROXY_ORIGIN: ${{ vars.PULSE_POLYMARKET_PROXY_ORIGIN }}
         run: pnpm build
 
