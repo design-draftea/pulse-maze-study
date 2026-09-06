@@ -15,7 +15,7 @@ acompanhamento de um moderador.
 1. Conhecer o Pulse pelo onboarding.
 2. Fazer uma entrada de US$10.
 3. Vender a entrada antes do fim da rodada.
-4. Encontrar uma resposta no Pergunte ao Pulse.
+4. Encontrar o histórico das entradas já feitas.
 5. Responder perguntas curtas após cada tarefa.
 6. Preencher uma avaliação final.
 
@@ -168,34 +168,35 @@ O que determina quanto você recebe ao vender antes do final da rodada?
 
 Alguma informação deixou você com dúvida durante a venda?
 
-## Tarefa 4: ajuda
+## Tarefa 4: acompanhamento
 
 **Texto da tarefa**
 
-Você percebeu que o preço do Bitcoin mostrado no Pulse está um pouco diferente do
-preço visto em outra plataforma.
+Você quer conferir todas as entradas que já fez, incluindo as de rodadas que já
+terminaram.
 
-Use o Pergunte ao Pulse para descobrir por que isso pode acontecer.
-
-**Pergunta de múltipla escolha**
-
-A resposta do Pergunte ao Pulse resolveu sua dúvida?
-
-1. Sim, completamente.
-2. Sim, parcialmente.
-3. Não.
-4. Não encontrei uma resposta.
+Encontre onde elas ficam.
 
 **Escala**
 
-Quão confiável pareceu a resposta apresentada?
+Quão fácil ou difícil foi encontrar suas entradas passadas?
 
-1 significa “nada confiável”.
-7 significa “muito confiável”.
+1 significa “muito difícil”.
+7 significa “muito fácil”.
+
+**Pergunta de múltipla escolha**
+
+Antes de procurar, onde você imaginou que essas informações estariam?
+
+1. Em Entradas.
+2. Em Movimientos.
+3. No menu do perfil.
+4. Na tela inicial.
+5. Não fazia ideia.
 
 **Pergunta aberta opcional**
 
-Que outra pergunta você faria ao Pulse?
+O que você esperava ver nessa tela e não encontrou?
 
 ## Avaliação final
 
@@ -216,7 +217,8 @@ Afirmações:
 5. Consegui diferenciar o valor total recebido do meu ganho.
 6. Entendi como vender antes do final da rodada.
 7. As informações de preço pareceram claras.
-8. Eu me sentiria seguro usando essa experiência.
+8. Consegui encontrar o histórico das minhas entradas.
+9. Eu me sentiria seguro usando essa experiência.
 
 ## Perguntas finais
 
@@ -323,3 +325,32 @@ que o rótulo induz; a 1 é a correta.
 Uma taxa alta na alternativa 2 não indica desatenção de quem respondeu: indica
 que o rótulo está ensinando a coisa errada. É um resultado acionável sobre o
 produto, e vale registrá-lo como tal na análise.
+
+### Por que a tarefa 4 deixou de ser sobre o assistente
+
+A tarefa era encontrar, no `Pregúntale a Pulse`, a explicação para o preço do
+Bitcoin divergir de outra plataforma. Ela saiu porque o estudo mede a experiência
+de comprar, vender e acompanhar — e o assistente é o que socorre quem não
+conseguiu, não o caminho que se quer observar.
+
+No lugar entrou o acompanhamento: encontrar as entradas já feitas, em
+`Entradas → PASADAS`. É uma pergunta de arquitetura da informação, e a
+alternativa `Movimientos` existe de verdade na navbar. Ela mede se o nome da
+seção corresponde ao que a pessoa espera encontrar ali: uma taxa alta em
+`Movimientos` diz que as duas seções estão disputando o mesmo significado na
+cabeça de quem usa.
+
+A afirmação sobre encontrar o histórico entrou na avaliação final pelo mesmo
+motivo, e a estrutura do estudo passa a citar acompanhamento no lugar da ajuda.
+
+### Um achado que ficou pelo caminho
+
+Perguntas naturais sobre a divergência de preço entre plataformas não chegam ao
+FAQ `price-difference` quando citam “el precio de bitcoin”. O assistente as
+resolve como consulta ao preço ao vivo e devolve a cotação do momento — o número
+que a pessoa já está olhando, e que não explica nada.
+
+Isso foi descoberto enquanto a tarefa 4 ainda era sobre o assistente. Com ela
+fora, deixou de bloquear o estudo, mas **continua valendo como ticket para o
+Pulse principal**: quem faz essa pergunta no produto hoje não recebe a resposta
+que existe justamente para ela.
