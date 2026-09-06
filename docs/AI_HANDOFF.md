@@ -1,6 +1,19 @@
 # Handoff entre Codex e Claude
 
-## Estado atual
+## Estado atual — encerramento automático do Maze
+
+- Data: 2026-09-06. Branch: `fix/maze-auto-end`, criada da `origin/main` atualizada; checkout inicialmente limpo.
+- Objetivo: acionar o botão real de encerramento do Website Test nos quatro marcos finais, sem encerrar o editor de paths nem URLs de sucesso abertas diretamente.
+- Integração não oficial: iframe `maze-tester-widget`, botão por texto exato em português/inglês/espanhol. O widget atual é same-origin (`about:blank`); mudanças do fornecedor podem invalidar a integração.
+- Arquivos: `src/services/mazeStep.ts`, `src/main.tsx`, `tests/mazeAutoEnd.test.ts`, `package.json`, este handoff.
+- Decisões: arma somente com `lwt` e widget de participante; intenção em sessionStorage expira em 30s e é consumida uma vez após recarga; URL deve coincidir. Aguarda botão estável por 2s, limita tentativas a 15s; sem widget, texto reconhecido ou acesso ao storage, mantém encerramento manual.
+- Validação automatizada: 11 novos cenários cobrem quatro marcos, clique único, URL direta, editor, storage bloqueado, navegação, expiração, botão desabilitado e texto desconhecido.
+- Validação local: `pnpm test:maze` (34 testes), `pnpm lint`, `pnpm build` e `git diff --check` passaram; aviso já existente de chunk >500 kB. No Chrome, harness temporário com iframe simulado confirmou recarga e exatamente um clique automático; harness removido. Isso não comprova integração com o widget real nem classificação do path.
+- Pendência: validar preview real e classificação dos paths após publicação autorizada. A espera de 2s não é confirmação de upload pelo Maze. Não houve commit, PR, merge ou deploy.
+- Próximo passo: revisar a alteração local, publicar com autorização e testar os quatro fluxos no Maze.
+
+
+## Histórico anterior: persistência do gráfico
 
 - Atualizado em: 2026-09-04
 - Agente que entrega: Codex
