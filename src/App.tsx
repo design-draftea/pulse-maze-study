@@ -69,7 +69,7 @@ import {
 } from './services/prototypeWallet'
 import type { HelpAssistantActionId } from './services/helpAssistant'
 import { buildHelpAssistantSnapshot } from './services/helpAssistantSnapshot'
-import { markMazeStep } from './services/mazeStep'
+import { getMazeStep, markMazeStep } from './services/mazeStep'
 import { useSeededSellEntry } from './hooks/useSeededSellEntry'
 import './App.css'
 
@@ -745,6 +745,14 @@ function App() {
   // A tarefa de acompanhamento termina em `Pasadas`. As outras abas não marcam
   // nada: chegar em `Entradas` já tem o seu próprio marco, e o que se mede aqui
   // é encontrar o histórico, não a seção.
+  // Lido uma vez, na montagem: depois da recarga do marco de sucesso, a URL é o
+  // único lugar que ainda sabe em qual aba a pessoa estava.
+  const [entriesInitialTab] = useState<EntriesTab>(
+    () => (getMazeStep(window.location.href) === 'past-entries-open'
+      ? 'past'
+      : 'open'),
+  )
+
   const handleEntriesTabSelect = useCallback((tab: EntriesTab) => {
     if (tab === 'past') markMazeStep('past-entries-open')
   }, [])
@@ -975,6 +983,7 @@ function App() {
               settledEntries={settledEntries}
               exitingEntry={saleExit}
               onExitEnd={handleSaleExitEnd}
+              initialTab={entriesInitialTab}
               onTabSelect={handleEntriesTabSelect}
               onViewMarket={() => handleNavigate('home')}
               onSell={handleEntrySell}

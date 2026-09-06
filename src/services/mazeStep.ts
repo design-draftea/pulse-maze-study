@@ -69,10 +69,39 @@ export const getMazeStep = (href: string) => (
 )
 
 /**
- * Usa `replaceState`, e não `pushState`, porque a aplicação já navega por hash e
- * por `pushState`: empilhar uma entrada por marco faria o botão voltar exigir
- * vários toques no meio da missão. O mesmo marco chamado duas vezes não reescreve
- * nada.
+ * Passos que encerram uma tarefa: são as URLs de sucesso configuradas no Maze.
+ */
+export const MAZE_COMPLETION_STEPS: ReadonlySet<MazeStep> = new Set([
+  'onboarding-complete',
+  'purchase-complete',
+  'sale-complete',
+  'past-entries-open',
+])
+
+/**
+ * Espera antes de recarregar, para o aviso de sucesso e a saída do bottom sheet
+ * terminarem de aparecer. Recarregar no mesmo quadro apagaria da tela — e da
+ * gravação — a confirmação que a pessoa acabou de conquistar.
+ */
+export const MAZE_COMPLETION_RELOAD_DELAY_MS = 1_200
+
+/**
+ * Marca o passo na URL.
+ *
+ * Os passos intermediários usam `replaceState`: são invisíveis, não recarregam
+ * nada e não empilham histórico — a aplicação já navega por hash e por
+ * `pushState`, e uma entrada por marco faria o botão voltar exigir vários toques
+ * no meio da missão.
+ *
+ * O passo de sucesso precisa de mais que isso. O snippet do Maze não intercepta
+ * `pushState` nem `replaceState` — os dois estão nativos na página — e a
+ * documentação deles diz que, numa aplicação de página única, uma URL alterada
+ * sem recarregamento não é detectada. Sem um carregamento de verdade, o
+ * participante chega ao fim da tarefa e o bloco nunca fecha.
+ *
+ * Então o último passo reescreve a URL e recarrega. O custo é a tela piscar uma
+ * vez, no instante em que a tarefa já terminou; a carteira e o onboarding vivem
+ * em `localStorage` e sobrevivem à recarga.
  */
 export const markMazeStep = (step: MazeStep) => {
   if (typeof window === 'undefined') return
@@ -82,5 +111,12 @@ export const markMazeStep = (step: MazeStep) => {
     window.history.state,
     '',
     buildMazeStepUrl(window.location.href, step),
+  )
+
+  if (!MAZE_COMPLETION_STEPS.has(step)) return
+
+  window.setTimeout(
+    () => window.location.reload(),
+    MAZE_COMPLETION_RELOAD_DELAY_MS,
   )
 }

@@ -9,7 +9,10 @@ import {
 const BASE = 'https://design-draftea.github.io/pulse-maze-study/'
 
 interface FakeWindow {
-  location: { href: string }
+  location: { href: string; reload: () => void }
+  reloads: number
+  timers: Array<() => void>
+  setTimeout: (callback: () => void) => number
   history: {
     state: unknown
     replaceState: (state: unknown, title: string, url: string) => void
@@ -37,10 +40,24 @@ const installWindow = (href: string): FakeWindow => {
         fake.location.href = new URL(url, fake.location.href).toString()
       },
     },
+    reloads: 0,
+    timers: [] as Array<() => void>,
+    setTimeout(callback: () => void) {
+      fake.timers.push(callback)
+      return fake.timers.length
+    },
   }
 
+  fake.location.reload = () => { fake.reloads += 1 }
   ;(globalThis as { window?: unknown }).window = fake
   return fake
+}
+
+/** Executa os temporizadores que o código agendou, sem esperar de verdade. */
+const correrTemporizadores = (fake: FakeWindow) => {
+  const pendentes = [...fake.timers]
+  fake.timers.length = 0
+  pendentes.forEach((run) => run())
 }
 
 test.afterEach(() => {
@@ -179,5 +196,67 @@ test('sem parâmetros do Maze, a URL continua enxuta', () => {
   assert.equal(
     buildMazeStepUrl(BASE, 'onboarding-complete'),
     `${BASE}?mazeStep=onboarding-complete`,
+  )
+})
+
+
+// ---------------------------------------------------------------------------
+// Recarga no passo de sucesso
+// ---------------------------------------------------------------------------
+
+/**
+ * O snippet do Maze não intercepta `pushState` nem `replaceState`, e a
+ * documentação deles diz que uma URL alterada sem recarregamento não é
+ * detectada numa aplicação de página única. Sem a recarga, a pessoa chega ao fim
+ * da tarefa e o bloco nunca fecha.
+ */
+test('o passo de sucesso recarrega a página', () => {
+  const fake = installWindow(`${BASE}?mazeStep=buy-betslip-open`)
+
+  markMazeStep('purchase-complete')
+
+  assert.equal(fake.location.href, `${BASE}?mazeStep=purchase-complete`)
+  assert.equal(fake.reloads, 0, 'não pode recarregar antes do aviso aparecer')
+
+  correrTemporizadores(fake)
+  assert.equal(fake.reloads, 1)
+})
+
+test('os passos intermediários não recarregam', () => {
+  const fake = installWindow(BASE)
+
+  markMazeStep('buy-betslip-open')
+  markMazeStep('entries-open')
+  correrTemporizadores(fake)
+
+  assert.equal(fake.reloads, 0)
+})
+
+test('os quatro passos de sucesso recarregam', () => {
+  const finais = [
+    'onboarding-complete',
+    'purchase-complete',
+    'sale-complete',
+    'past-entries-open',
+  ] as const
+
+  finais.forEach((step) => {
+    const fake = installWindow(BASE)
+    markMazeStep(step)
+    correrTemporizadores(fake)
+
+    assert.equal(fake.reloads, 1, `${step} não recarregou`)
+  })
+})
+
+test('a URL já está correta antes da recarga', () => {
+  const fake = installWindow(`${BASE}?task=sell&lwt=true#entradas`)
+
+  markMazeStep('sale-complete')
+
+  // A recarga acontece sobre esta URL, então é ela que o Maze vai registrar.
+  assert.equal(
+    fake.location.href,
+    `${BASE}?task=sell&mazeStep=sale-complete&lwt=true#entradas`,
   )
 })

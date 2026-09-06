@@ -108,6 +108,12 @@ interface OpenEntriesProps {
   onSell: (side: OutcomeSide) => void
   /** Avisa a troca de aba. Só dispara quando a aba muda de fato. */
   onTabSelect?: (tab: EntriesTab) => void
+  /**
+   * Aba em que a seção abre. O marco de sucesso do Maze recarrega a página, e
+   * sem isto a pessoa voltaria para `ABIERTAS` logo depois de encontrar o
+   * histórico que a tarefa pedia.
+   */
+  initialTab?: EntriesTab
 }
 
 export function OpenEntries({
@@ -125,8 +131,9 @@ export function OpenEntries({
   onViewMarket,
   onSell,
   onTabSelect,
+  initialTab = 'open',
 }: OpenEntriesProps) {
-  const [activeTab, setActiveTab] = useState<EntriesTab>('open')
+  const [activeTab, setActiveTab] = useState<EntriesTab>(initialTab)
   const [tabTransitionPhase, setTabTransitionPhase] = useState<TabTransitionPhase>('idle')
   const [areTabsPinned, setAreTabsPinned] = useState(false)
   const tabsRef = useRef<HTMLDivElement>(null)
