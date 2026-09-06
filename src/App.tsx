@@ -66,6 +66,7 @@ import {
 } from './services/prototypeWallet'
 import type { HelpAssistantActionId } from './services/helpAssistant'
 import { buildHelpAssistantSnapshot } from './services/helpAssistantSnapshot'
+import { markMazeStep } from './services/mazeStep'
 import './App.css'
 
 const MARKET_HEADER_COMPACT_SCROLL_Y = 80
@@ -614,8 +615,13 @@ function App() {
 
   const handleOnboardingOpen = useCallback(() => {
     dismissOnboardingInvite()
+    markMazeStep('onboarding-open')
     setIsOnboardingOpen(true)
   }, [dismissOnboardingInvite])
+
+  const handleOnboardingComplete = useCallback(() => {
+    markMazeStep('onboarding-complete')
+  }, [])
 
   const handleHelpOpen = useCallback(() => {
     setProfileSheetMode('help')
@@ -1051,6 +1057,7 @@ function App() {
       <OnboardingBottomSheet
         isOpen={isOnboardingOpen}
         onClose={handleOnboardingClose}
+        onComplete={handleOnboardingComplete}
       />
     </>
   )

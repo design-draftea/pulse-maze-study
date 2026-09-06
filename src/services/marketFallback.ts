@@ -84,6 +84,14 @@ export const selectFreshPriceFeed = (
   return null
 }
 
+export const selectInitialPriceFeed = (
+  candidate: PriceFeedCandidate | null,
+  now: number,
+  selectionDeadline: number,
+): PriceFeedCandidate | null => (
+  candidate?.source === 'chainlink' || now >= selectionDeadline ? candidate : null
+)
+
 export const calculateFallbackOutcomePrices = (
   currentPrice: number | null,
   targetPrice: number | null,

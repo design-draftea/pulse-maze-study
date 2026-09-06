@@ -6,6 +6,7 @@ import {
   calculatePriceChartDomain,
   clampPriceChartAnchor,
   countPricePointGaps,
+  connectPriceChartEndpoint,
   DOMAIN_CONTRACTION_DELAY_MS,
   DOMAIN_SHIFT_CONFIRMATION_MS,
   getContinuousVisiblePricePoints,
@@ -14,12 +15,125 @@ import {
   getPriceChartWindowPoints,
   interpolatePriceAt,
   interpolatePriceChartDomain,
+  LIVE_WINDOW_DURATION_MS,
+  LIVE_MINIMUM_GRID_STEP,
   mergePricePointSeries,
   projectPriceToY,
   resolvePriceChartTarget,
   stabilizePriceChartDomain,
   type PriceChartDomain,
 } from '../src/components/priceChartModel.ts'
+import { getPriceChartGeometry } from '../src/components/priceChartGeometry.ts'
+
+test('histórico tardio não injeta picos nas lacunas da curva restaurada', () => {
+  const observed = [
+    { timestamp: 60000, value: 100 },
+    { timestamp: 62000, value: 100.2 },
+  ]
+  const historical = [
+    { timestamp: 0, value: 99 },
+    { timestamp: 61000, value: 110 },
+    { timestamp: 63000, value: 115 },
+  ]
+  assert.deepEqual(mergePricePointSeries(historical, observed, 0), [historical[0], ...observed])
+  assert.deepEqual(mergePricePointSeries(historical, [], 0), historical)
+  assert.deepEqual(mergePricePointSeries(historical, [{ timestamp: -1, value: 100 }], 0), historical)
+})
+
+test('LIVE revela oscilações pequenas com piso de 25 centavos sem mudar o padrão dos ranges fixos', () => {
+  const points = [
+    { timestamp: 0, value: 79670.55 },
+    { timestamp: 30000, value: 79671.28 },
+  ]
+  const options = { applyTrendShift: false, includeAllPoints: true }
+  const live = calculatePriceChartDomain(points, 79664.53, {
+    ...options, minimumGridStep: LIVE_MINIMUM_GRID_STEP,
+  })
+  assert.equal(live.step, 0.25)
+  assert.equal(live.top - live.bottom, 1.5)
+  assert.ok(live.bottom <= points[0].value && live.top >= points[1].value)
+  assert.equal(calculatePriceChartDomain(points, null, options).step, 2.5)
+  const flat = calculatePriceChartDomain([points[0]], null, {
+    ...options, minimumGridStep: LIVE_MINIMUM_GRID_STEP,
+  })
+  assert.equal(flat.step, 0.25)
+  assert.equal(flat.top - flat.bottom, 1.5)
+})
+
+test('LIVE amplia para movimentos fortes e espera cinco segundos antes de voltar ao piso menor', () => {
+  const calm = [{ timestamp: 0, value: 100 }, { timestamp: 1000, value: 100.1 }]
+  const volatile = [...calm, { timestamp: 2000, value: 120 }]
+  const options = { includeAllPoints: true, applyTrendShift: false, minimumGridStep: LIVE_MINIMUM_GRID_STEP }
+  const small = calculatePriceChartDomain(calm, null, options)
+  const large = calculatePriceChartDomain(volatile, null, options)
+  let state = stabilizePriceChartDomain(null, small, calm, 0, options)
+  state = stabilizePriceChartDomain(state, large, volatile, 1000, options)
+  assert.ok(state.domain.step > 0.25)
+  state = stabilizePriceChartDomain(state, small, calm, 2000, options)
+  assert.equal(state.domain.step, large.step)
+  state = stabilizePriceChartDomain(state, small, calm, 6999, options)
+  assert.equal(state.domain.step, large.step)
+  state = stabilizePriceChartDomain(state, small, calm, 7000, options)
+  assert.equal(state.domain.step, 0.25)
+})
+
+test('janela de 30s conserva os preços anteriores na virada da rodada', () => {
+  const boundary = Date.UTC(2026, 8, 4, 19, 45)
+  const history = Array.from({ length: 61 }, (_, i) => ({
+    timestamp: boundary - 52_000 + i * 1000, value: 100 + i / 10,
+  }))
+  const now = boundary + 8_000
+  const window = getPriceChartWindowPoints(history, now - LIVE_WINDOW_DURATION_MS, now)
+  assert.equal(window[0].timestamp, boundary - 22_000)
+  assert.equal(window.at(-1)?.timestamp, now)
+  assert.equal(window.length, 31)
+  assert.ok(window.some(p => p.timestamp < boundary))
+  const anchor = boundary - 15_000
+  assert.equal(clampPriceChartAnchor(anchor, history, LIVE_WINDOW_DURATION_MS, now), anchor)
+})
+
+test('retenção ajusta o arraste antigo e histórico parcial não inventa uma série', () => {
+  const now = 4_000_000
+  const history = [{timestamp: now - 3_600_000, value: 100}, {timestamp: now, value: 101}]
+  assert.equal(clampPriceChartAnchor(0, history, LIVE_WINDOW_DURATION_MS, now), now - 3_570_000)
+  assert.deepEqual(getPriceChartWindowPoints([], now - 30_000, now), [])
+  const partial = [{timestamp: now - 8_000, value: 100}, {timestamp: now, value: 101}]
+  const visible = getContinuousVisiblePricePoints(partial, now, 240, 0, 8)
+  assert.equal(visible.points[0].timestamp, now - 8_000)
+  assert.equal(visible.points[0].x, 176)
+})
+
+test('linha e marcador compartilham a ponta durante alta, queda e mudança de domínio', () => {
+  const history = [{ timestamp: 0, value: 100, x: 0, y: 100 }]
+  let previousY = -1
+  for (const [value, top] of [[101, 110], [104, 110], [99, 110], [103, 110], [103, 120]]) {
+    const endpoint = {
+      timestamp: 30_000, value, x: 236,
+      y: projectPriceToY(value, { bottom: 90, top }, 16, 220),
+    }
+    const line = connectPriceChartEndpoint(history, endpoint)
+    assert.equal(line.at(-1), endpoint)
+    assert.notEqual(line.at(-1)?.y, previousY)
+    assert.equal(line[0], history[0])
+    previousY = endpoint.y
+  }
+  assert.deepEqual(history, [{ timestamp: 0, value: 100, x: 0, y: 100 }])
+})
+
+test('ponta histórica exclui guardas além da borda e substitui a ponta antiga', () => {
+  const source = [{ timestamp: 0, value: 100 }, { timestamp: 60_000, value: 160 }]
+  const visible = getContinuousVisiblePricePoints(source, 45_000, 236, 0, 236 / 30)
+  const endpoint = { timestamp: 45_000, value: interpolatePriceAt(source, 45_000)!, x: 236 }
+  const line = connectPriceChartEndpoint([
+    ...visible.points,
+    { timestamp: 45_100, value: 145.1, x: 236.8 },
+  ], endpoint)
+  assert.equal(line.at(-1), endpoint)
+  assert.equal(endpoint.value, 145)
+  assert.ok(line.slice(0, -1).every((point) => point.x < 236))
+  assert.equal(line.filter((point) => point.x === 236).length, 1)
+  assert.deepEqual(connectPriceChartEndpoint([], endpoint), [endpoint])
+})
 
 test('organiza pontos por rodada, deduplica por segundo e respeita o limite', () => {
   const roundStart = Date.UTC(2026, 8, 1, 10, 30, 0)
@@ -124,8 +238,8 @@ test('configura escala e marcações para cada range do gráfico', () => {
 
   assert.deepEqual(getPriceChartRangeConfig('live', seriesRight), {
     durationMs: null,
-    pixelsPerSecond: 24,
-    timeTickIntervalMs: 5_000,
+    pixelsPerSecond: 8,
+    timeTickIntervalMs: 10_000,
   })
   assert.deepEqual(getPriceChartRangeConfig('5m', seriesRight), {
     durationMs: 5 * 60_000,
@@ -136,6 +250,35 @@ test('configura escala e marcações para cada range do gráfico', () => {
   assert.equal(getPriceChartRangeConfig('15m', seriesRight).timeTickIntervalMs, 5 * 60_000)
   assert.equal(getPriceChartRangeConfig('1h', seriesRight).pixelsPerSecond, 1 / 15)
   assert.equal(getPriceChartRangeConfig('1h', seriesRight).timeTickIntervalMs, 20 * 60_000)
+})
+
+test('mantém a janela LIVE em 30 segundos em todas as larguras mobile', () => {
+  for (const width of [320, 375, 430, 499]) {
+    const { seriesRight } = getPriceChartGeometry(width)
+    const { pixelsPerSecond } = getPriceChartRangeConfig('live', seriesRight)
+    const windowSpanMs = (seriesRight / pixelsPerSecond) * 1000
+
+    assert.equal(Math.round(windowSpanMs), LIVE_WINDOW_DURATION_MS)
+  }
+})
+
+test('projeta início, meio e presente da janela LIVE nas posições corretas', () => {
+  const displayTime = 30_000
+  const seriesRight = 240
+  const { pixelsPerSecond } = getPriceChartRangeConfig('live', seriesRight)
+  const visible = getContinuousVisiblePricePoints(
+    [
+      { timestamp: 0, value: 100 },
+      { timestamp: 15_000, value: 105 },
+      { timestamp: displayTime, value: 110 },
+    ],
+    displayTime,
+    seriesRight,
+    0,
+    pixelsPerSecond,
+  )
+
+  assert.deepEqual(visible.points.map(({ x }) => x), [0, 120, 240])
 })
 
 test('mantém exatamente três horários em posições fixas e distribuídas', () => {
@@ -183,6 +326,50 @@ test('o domínio de um range considera todos os pontos visíveis', () => {
 
   assert.ok(liveDomain.bottom > 50)
   assert.ok(rangeDomain.bottom <= 50)
+})
+
+test('o domínio LIVE inclui oscilações de toda a janela de 30 segundos', () => {
+  const points = Array.from({ length: 31 }, (_, index) => ({
+    timestamp: index * 1_000,
+    value: index === 1 ? 50 : 100 + index / 100,
+  }))
+  const windowPoints = getPriceChartWindowPoints(
+    points,
+    0,
+    LIVE_WINDOW_DURATION_MS,
+  )
+  const domain = calculatePriceChartDomain(windowPoints, null, {
+    includeAllPoints: true,
+  })
+
+  assert.ok(domain.bottom <= 50)
+  assert.ok(domain.top >= 100.3)
+})
+
+test('a estabilização LIVE reage a extremos no início da janela visível', () => {
+  const currentDomain: PriceChartDomain = { bottom: 95, top: 110, step: 2.5 }
+  const points = Array.from({ length: 31 }, (_, index) => ({
+    timestamp: index * 1_000,
+    value: index === 0 ? 50 : 100,
+  }))
+  const candidate = calculatePriceChartDomain(points, null, {
+    includeAllPoints: true,
+  })
+  const stabilized = stabilizePriceChartDomain(
+    {
+      domain: currentDomain,
+      contractionCandidateKey: null,
+      contractionStartedAt: null,
+      shiftCandidateKey: null,
+      shiftStartedAt: null,
+    },
+    candidate,
+    points,
+    LIVE_WINDOW_DURATION_MS,
+    { includeAllPoints: true },
+  )
+
+  assert.equal(stabilized.domain, candidate)
 })
 
 test('interpola a passagem pela borda esquerda usando os pontos reais vizinhos', () => {

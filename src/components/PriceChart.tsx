@@ -19,6 +19,7 @@ import {
 } from './priceChartGeometry'
 import {
   countPricePointGaps,
+  connectPriceChartEndpoint,
   getContinuousVisiblePricePoints,
   getPriceChartRangeConfig,
   getPriceChartTimeTicks,
@@ -536,7 +537,7 @@ export function PriceChart({
         { timestamp: displayTime, value: latestPrice },
       ]
   const visibleSeries = getContinuousVisiblePricePoints(
-    pointsWithCurrent,
+    isPanned ? safePoints : pointsWithCurrent,
     anchorTime,
     seriesRight,
     0,
@@ -559,12 +560,10 @@ export function PriceChart({
     isDirectionActive ? '' : ' price-chart__direction-clear--closed'
   }`
   const directionCenterX = directionIconX + 12
-  const visibleLinePoints = chartPoints.length > 0
-    ? chartPoints
-    : [currentPoint]
+  const visibleLinePoints = connectPriceChartEndpoint(chartPoints, currentPoint)
   const linePath = getSmoothPath(visibleLinePoints)
   const areaStartX = visibleLinePoints[0]?.x ?? PLOT_LEFT
-  const areaPath = `${linePath} L ${seriesRight} ${PLOT_BOTTOM} L ${areaStartX} ${PLOT_BOTTOM} Z`
+  const areaPath = `${linePath} L ${currentPoint.x} ${PLOT_BOTTOM} L ${areaStartX} ${PLOT_BOTTOM} Z`
   const ticks = Array.from(
     { length: GRID_LINE_COUNT },
     (_, index) => top - step * index,
@@ -599,7 +598,7 @@ export function PriceChart({
       ref={containerRef}
       className={`price-chart ${isPanned ? 'price-chart--panned' : ''} ${isPanning ? 'price-chart--panning' : ''} ${className}`}
       aria-label={isPanned
-        ? `Gráfico del historial de la ronda: ${priceFormatter.format(anchorPrice)}`
+        ? `Gráfico del historial de Bitcoin: ${priceFormatter.format(anchorPrice)}`
         : `Gráfico del precio actual: ${priceFormatter.format(latestPrice)}`}
       data-testid="price-chart"
       data-range={range}
@@ -939,20 +938,20 @@ export function PriceChart({
         >
           <circle
             className="price-chart__point-halo"
-            cx={seriesRight}
+            cx={currentPoint.x}
             cy="0"
             r="10"
           />
           <circle
             className="price-chart__point-ring"
-            cx={seriesRight}
+            cx={currentPoint.x}
             cy="0"
             r="6.5"
             filter={`url(#point-glow-${id})`}
           />
           <circle
             className="price-chart__point"
-            cx={seriesRight}
+            cx={currentPoint.x}
             cy="0"
             r="3"
           />

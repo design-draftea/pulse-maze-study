@@ -4,6 +4,96 @@
 
 - Atualizado em: 2026-09-04
 - Agente que entrega: Codex
+- Status: implementação e validação local concluídas; sem commit, PR, merge ou deploy nesta tarefa
+- Objetivo: preservar os pontos reais recentes do gráfico após F5 e experimentar escala LIVE com piso de US$ 0,25, sem usar cache como cotação atual.
+- Branch: `fix/chart-history-persistence`, criada da `origin/main` atualizada, checkout inicialmente limpo.
+
+### Escopo e decisões
+
+- Correção do relato posterior de picos após F5: a seleção inicial já aguardava 3s para fixar uma fonte, mas o preço publicado escapava dessa espera. `useBtcPriceFeeds` agora publica somente Chainlink durante a espera; Coinbase/Kraken entram após o prazo se necessário. `selectInitialPriceFeed` foi acrescentado a `marketFallback.ts` com teste de regressão.
+- `mergePricePointSeries` agora usa candles apenas antes da primeira observação válida. Lacunas entre observações restauradas não recebem pontos de outra fonte/resolução; teste cobre histórico tardio e série vazia.
+- Reprodução controlada no navegador a 375px: cache perto de 100, Coinbase chegando primeiro a 110 e Chainlink após 1,6s a 100,03. A lógica anterior publicou 110 e deixou um pico salvo; a corrigida registrou 79 amostras a 100,03, sem picos. Isso reproduz o mecanismo observado; não recupera a sequência exata de pacotes do print original.
+- Contingência controlada sem Chainlink também validada: Coinbase entrou após a espera e permaneceu como fonte. Harnesses e cópias temporárias da lógica antiga removidos.
+- Testes atualizados: 49 em `test:chart`, 7 em `test:fallback`, lint/build passando (aviso conhecido de chunk). Arquivos adicionais: `src/hooks/useBtcPriceFeeds.ts`, `src/services/marketFallback.ts`, `tests/marketFallback.test.ts`.
+- Pontos já salvos pela versão anterior não são apagados ou suavizados automaticamente; saem da janela LIVE em 30 segundos e do histórico conforme a retenção de uma hora.
+
+- Continuação autorizada: escala LIVE, inclusive arraste, com `minimumGridStep: 0.25`; o valor padrão de 2.5 permanece para 5M/15M/1H. As alterações anteriores de persistência permanecem juntas nesta branch para o teste local. Nenhum commit ou publicação foi feito.
+- Complemento validado: 48 testes, lint e build passando. No navegador a 375px, série controlada de menos de US$ 1 usou passo 0.25 e amplitude 1.50; 5M/15M/1H conservaram passo 2.5. Feed real foi observado em live com passo 2.00 e sem overflow. O harness temporário foi removido.
+- Arquivos adicionais: `src/components/priceChartModel.ts`, `src/components/MarketPriceChart/MarketPriceChart.tsx`, `tests/priceChartModel.test.ts`.
+- Servidor de teste também disponível na porta 5187, escutando na rede local; abertura pelo endereço LAN validada no navegador. Acesso no celular requer a mesma rede Wi-Fi.
+
+- Cache versionado `pulse.chart-history.v1`, com uma hora e até 3.601 pontos observados, deduplicados por segundo. Restauração síncrona no estado inicial do hook; valores e timestamps originais preservados, inclusive entre rodadas.
+- Serialização e leitura descartam pontos inválidos, futuros ou expirados. Cache corrompido/incompatível equivale a vazio. Candles continuam perdendo para observações no mesmo segundo.
+- Gravação de alterações agendada a cada segundo após a execução anterior, com flush final em `pagehide`, `visibilitychange` para hidden e unmount. Falhas de armazenamento não interrompem o feed. Proteção equivalente adicionada à leitura/gravação do cache de rodadas, que antes poderia interromper a inicialização.
+- A cotação atual e o status continuam vindo exclusivamente do feed. Primeira visita e períodos sem observações continuam dependendo do histórico disponível; domínio vertical é recalculado.
+- Sem dependências novas, backend ou alteração visual dos controles.
+
+### Arquivos alterados
+
+- `src/services/chartHistoryCache.ts` (novo), `src/hooks/useResilientBtcMarketRound.ts`.
+- `tests/chartHistoryCache.test.ts` (novo), `package.json` (suíte test:chart), `docs/AI_CONTEXT.md`, `docs/AI_HANDOFF.md`.
+
+### Validações
+
+- `pnpm test:chart`: 46 testes passando; seis novos cobrem restauração/continuidade, expiração, dados inválidos/futuros, versão, limite/deduplicação, precedência sobre candles e armazenamento bloqueado.
+- `pnpm lint` e `pnpm build`: passando; permanece aviso conhecido de chunk acima de 500 kB. `git diff --check`: limpo.
+- App real em 375×812: após acumular mais de 30s, F5 conservou os 23 pontos visíveis da janela LIVE imediatamente, ainda em `connecting`. O feed retomou em `live`. Outro F5 na rodada seguinte restaurou 162 pontos observados, 26 visíveis, também antes da conexão.
+- Ranges LIVE/5M/15M/1H publicaram respectivamente 30000/300000/900000/3600000 ms, sem overflow horizontal; gesto real de arraste entrou no histórico.
+- Harness temporário com o hook e o gráfico reais, relógio/feed controlados: 40/40 pontos preservados na virada, preço inicial null e status connecting durante atraso de 15s; novos pontos chegaram após a reconexão. Recarga subsequente preservou 46/46 pontos. Com armazenamento bloqueado, iniciou vazio e acumulou preços em live sem erros. Cache vazio também iniciou sem pontos e evoluiu normalmente.
+- Eventos controlados de pagehide/visibilitychange verificaram flush final. Após ajuste do agendamento, 20 intervalos normais de gravação medidos entre 1000 e 1004 ms. O harness e suas fixtures foram removidos.
+
+### Pendências e próximo passo
+
+- Nenhuma pendência de implementação/validação local deste escopo. Alterações permanecem sem commit para revisão; PR, merge e publicação estão fora da autorização desta etapa.
+- Servidor local de desenvolvimento disponível em `http://127.0.0.1:5186/`.
+
+## Histórico: LIVE de 30 segundos
+
+
+- Atualizado em: 2026-09-04
+- Agente que entrega: Codex
+- Agente esperado a seguir: pessoa usuária, para novos ajustes de produto
+- Status: concluído — commit `7ccfc44`, PR #66, merge `ed623cb` e deploy do GitHub Pages `33927811225` concluídos
+- Objetivo: ampliar o range `LIVE` do gráfico para os últimos 30 segundos em qualquer largura mobile, com marcações de 10 segundos e domínio vertical calculado por toda a janela visível
+- Branch: `feature/live-chart-30s`, integrada à `main`; branch remota removida no merge
+
+### Escopo e decisões
+
+- `LIVE` mantém `durationMs: null` como identificador semântico, mas calcula `pixelsPerSecond` pela largura disponível e pela constante de `30.000ms`. O `data-window-span` fica exatamente em `30000` de `320px` a `499px`.
+- As marcações móveis do eixo passaram de `5s` para `10s`, evitando sobreposição após a compressão horizontal.
+- O domínio ao vivo usa todos os pontos recortados pelos últimos `30s`; o domínio arrastado também considera toda a janela. A tendência continua usando a leitura curta existente, e os ranges `5M`, `15M` e `1H` não mudaram.
+- Regra revisada pela pessoa usuária: LIVE usa `historyPoints` e atravessa a virada da rodada. Arraste consulta até uma hora, preserva a âncora na virada e respeita a expiração do histórico. Domínio estabilizado não reinicia por `roundStart`; timer e objetivo continuam mudando normalmente. Histórico vazio usa os pontos reais da rodada como contingência.
+- Ajuste posterior: linha, área e bolinha compartilham a coordenada final `currentPoint`; pontos projetados na borda ou além dela são substituídos por essa ponta. No arraste, a série original não recebe o preço animado atual. Nenhuma prop pública ou dependência foi adicionada.
+
+### Arquivos alterados
+
+- `src/components/priceChartModel.ts`
+- `src/components/PriceChart.tsx`
+- `src/components/MarketPriceChart/MarketPriceChart.tsx`
+- `tests/priceChartModel.test.ts`
+- `docs/AI_CONTEXT.md`
+- `docs/AI_HANDOFF.md`
+
+### Validações
+
+- `pnpm test:chart`: 40 testes passando, incluindo ponta compartilhada, virada com 30s contínuos, retenção do arraste e histórico parcial/vazio.
+- `pnpm lint`: limpo.
+- `pnpm build`: concluído; permanece apenas o aviso conhecido de chunk acima de `500kB`.
+- Navegador local em `320×568`, `375×812`, `430×832` e `499×900`: `data-window-span="30000"`, sem overflow horizontal e sem sobreposição entre os horários visíveis de 10 segundos.
+- Em `375×812`, `5M`, `15M`, `1H` e `LIVE` publicaram respectivamente `300000`, `900000`, `3600000` e `30000`; o arraste entrou no histórico e o botão `LIVE` voltou ao presente em `320ms`. Console sem erros ou avisos.
+- GitHub Actions executou build, testes, lint e deploy em `33927811225`. A versão publicada em `https://design-draftea.github.io/pulse/` respondeu em mobile com `data-window-span="30000"`.
+
+### Pendências e próximo passo
+
+- Continuidade validada em cenário React controlado no navegador: virada preservou 32 pontos renderizados (incluindo guarda), janela de 30000ms e domínio 92.5–107.5 enquanto o objetivo mudou de 100 para 101. Durante arraste, a âncora permaneceu exatamente igual antes/depois; contingência sem histórico anterior renderizou os nove pontos reais disponíveis. O arquivo temporário de QA foi removido após o teste.
+- Sincronização: antes do ajuste, a amostra de 40 leituras incluiu 10 movimentos, sem reproduzir a falha intermitente (diferença inferior a `0,005px`). Após o ajuste, 320 leituras nas quatro larguras estabilizadas incluíram 29 movimentos, sem movimento da bolinha com caminho inalterado; diferença inferior a `0,005px`. Mais 80 leituras no arraste, 100 durante retorno e 160 nos quatro ranges também ficaram abaixo de `0,005px`. A medição comparou a coordenada final do caminho SVG com o centro renderizado da bolinha. Console sem erros. Isso verifica a conexão geométrica; não comprova a causa do relato intermitente original.
+- Não há pendência de código, Pull Request, merge ou publicação neste escopo.
+
+
+## Histórico: zoom e teclado do assistente
+
+- Atualizado em: 2026-09-04
+- Agente que entrega: Codex
 - Agente esperado a seguir: GitHub Actions, para validar e publicar a `main` após o merge autorizado
 - Status: implementação e validação local e no iPhone concluídas; Pull Request e merge autorizados pela pessoa usuária
 - Objetivo: remover zoom/pinça de todo o Pulse e fazer o compositor do `Pregúntale a Pulse` acompanhar o teclado como o bottom sheet de `/criar-conta` do Draftaco
