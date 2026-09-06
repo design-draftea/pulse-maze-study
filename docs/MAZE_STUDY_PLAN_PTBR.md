@@ -23,15 +23,18 @@ acompanhamento de um moderador.
 
 **Título**
 
-Ajude a melhorar o Draftea Pulse
+Conheça o Draftea Pulse antes do lançamento
 
 **Texto**
 
-Nesta atividade, você vai conhecer uma nova experiência da Draftea e realizar
-algumas tarefas.
+O Draftea Pulse é um produto novo, que pretendemos lançar em breve. Antes disso,
+estamos testando a experiência com um grupo selecionado de pessoas que já usam a
+Draftea — e você é uma delas.
 
-Use o Pulse como usaria normalmente. Durante o teste, responda com base no que
-você entendeu e sentiu.
+Esta é a sua primeira vez no Pulse, e é justamente essa primeira impressão que
+queremos entender. Use como usaria normalmente e responda com base no que você
+entendeu e sentiu. Não existe resposta certa ou errada: apontar o que confundiu
+ajuda mais do que elogiar.
 
 A atividade dura aproximadamente 10 minutos. Todos os valores e operações são
 simulados.
