@@ -153,6 +153,9 @@ function App() {
     BetslipOperationMode
   >('buy')
   const [isPurchaseLoading, setIsPurchaseLoading] = useState(false)
+  // A tarefa de venda termina aqui. Depois disso a entrada não é mais reposta,
+  // senão uma nova nasceria logo após a venda e desfaria o que a pessoa fez.
+  const [hasCompletedSale, setHasCompletedSale] = useState(false)
   const [purchaseSuccess, setPurchaseSuccess] = useState<
     BetslipSuccessDetails | null
   >(null)
@@ -195,6 +198,7 @@ function App() {
   // link direto recebe uma equivalente, feita pelo mesmo caminho de código.
   useSeededSellEntry({
     hasOpenPosition: currentPosition.up > 0 || currentPosition.down > 0,
+    hasCompletedSale,
     quoteBuy: outcomeMarket.quoteBuy,
     roundStart: marketRound.roundStart,
     purchase,
@@ -714,6 +718,7 @@ function App() {
     markMazeStep(
       details.operation === 'sell' ? 'sale-complete' : 'purchase-complete',
     )
+    if (details.operation === 'sell') setHasCompletedSale(true)
     setPurchaseSuccess(details)
     if (details.operation === 'sell') {
       setSaleExit((current) => (

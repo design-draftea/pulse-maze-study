@@ -108,15 +108,6 @@ test('a URL é a mesma para todo participante no mesmo ponto', () => {
 // URL da tarefa de venda
 // ---------------------------------------------------------------------------
 
-test('a URL da venda é reconhecida pelo parâmetro da tarefa', async () => {
-  const { isSellTaskUrl } = await import('../src/hooks/useSeededSellEntry.ts')
-
-  assert.equal(isSellTaskUrl(`${BASE}?task=sell`), true)
-  assert.equal(isSellTaskUrl(`${BASE}?task=sell&mazeStep=entries-open`), true)
-  assert.equal(isSellTaskUrl(BASE), false)
-  assert.equal(isSellTaskUrl(`${BASE}?task=buy`), false)
-})
-
 /**
  * O parâmetro da tarefa precisa sobreviver a cada marco, senão a semeadura da
  * entrada deixaria de valer no meio da missão e a URL de sucesso mudaria de

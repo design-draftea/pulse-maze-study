@@ -22,41 +22,86 @@ export const isSellTaskUrl = (href: string) => (
   new URL(href).searchParams.get(MAZE_TASK_PARAM) === MAZE_SELL_TASK
 )
 
+export interface SeedSellEntryDecision {
+  isSellTask: boolean
+  hasCompletedSale: boolean
+  hasOpenPosition: boolean
+  /** Rodada em que já se semeou, ou `null` se ainda não se semeou nenhuma. */
+  seededRound: number | null
+  roundStart: number
+}
+
+/**
+ * A decisão isolada do React, porque é ela que carrega as regras difíceis:
+ * repor a entrada quando a rodada vira, mas nunca depois da venda, e nunca duas
+ * vezes na mesma rodada. Testar isso pela interface exigiria esperar a virada de
+ * uma rodada real.
+ */
+export const shouldSeedSellEntry = ({
+  isSellTask,
+  hasCompletedSale,
+  hasOpenPosition,
+  seededRound,
+  roundStart,
+}: SeedSellEntryDecision) => (
+  isSellTask
+  && !hasCompletedSale
+  && !hasOpenPosition
+  && seededRound !== roundStart
+)
+
 interface SeededSellEntryInput {
   hasOpenPosition: boolean
+  /** Trava a semeadura depois que a pessoa vende: a tarefa acabou. */
+  hasCompletedSale: boolean
   quoteBuy: (side: OutcomeSide, amount: number) => ExecutionQuote | null
   roundStart: number
   purchase: (purchase: PrototypeWalletPurchase) => { applied: boolean }
 }
 
 /**
- * Garante uma entrada aberta quando a tarefa de venda abre.
+ * Garante que exista uma entrada aberta enquanto a tarefa de venda estiver em
+ * curso.
  *
- * Só age quando não existe posição na rodada corrente: a entrada que a pessoa
- * fez sozinha é sempre preferida à semeada. Espera o mercado publicar uma
- * cotação completa antes de comprar, então a entrada nasce pelo mesmo caminho de
- * código e ao mesmo preço de uma compra real — não é um registro fabricado.
+ * Só age quando não existe posição na rodada corrente, então a entrada que a
+ * pessoa fez sozinha na tarefa anterior é sempre preferida à semeada. Espera o
+ * mercado publicar uma cotação completa antes de comprar, e usa `purchase`: a
+ * entrada nasce pelo mesmo caminho de código e ao mesmo preço de uma compra
+ * real, não é um registro fabricado na carteira.
  *
- * Semeia uma vez por carregamento. Se a rodada virar no meio da tarefa, a
- * posição liquida e não é recriada: uma entrada aparecendo sozinha depois de a
- * pessoa já ter vendido seria mais confuso do que a tarefa terminar ali.
+ * A garantia vale por rodada, e não por carregamento. A rodada real vira a cada
+ * 15 minutos: se virasse no meio da tarefa, a posição liquidaria e a pessoa
+ * ficaria sem nada para vender — a tarefa deixaria de ser difícil e passaria a
+ * ser impossível, sem que ela entendesse por quê. Semeando de novo na rodada
+ * seguinte, a entrada continua aberta; o monto permanece o mesmo e o preço médio
+ * e o ganho potencial passam a ser os da rodada corrente, que é o único par de
+ * valores coerente com o objetivo que está na tela.
+ *
+ * `hasCompletedSale` é o que impede isso de virar um laço: sem ele, vender
+ * zeraria a posição e uma entrada nova nasceria em seguida, desfazendo diante
+ * dos olhos da pessoa o que ela acabou de fazer.
  */
 export function useSeededSellEntry({
   hasOpenPosition,
+  hasCompletedSale,
   quoteBuy,
   roundStart,
   purchase,
 }: SeededSellEntryInput) {
-  const hasSeededRef = useRef(false)
+  // Guarda a rodada já semeada, e não um booleano: é o que permite semear de
+  // novo quando a rodada vira, sem semear duas vezes na mesma.
+  const seededRoundRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (hasSeededRef.current) return
-    if (!isSellTaskUrl(window.location.href)) return
+    const shouldSeed = shouldSeedSellEntry({
+      isSellTask: isSellTaskUrl(window.location.href),
+      hasCompletedSale,
+      hasOpenPosition,
+      seededRound: seededRoundRef.current,
+      roundStart,
+    })
 
-    if (hasOpenPosition) {
-      hasSeededRef.current = true
-      return
-    }
+    if (!shouldSeed) return
 
     const quote = quoteBuy('up', SEEDED_SELL_AMOUNT)
     // Sem cotação completa o mercado ainda está conectando. O efeito roda de
@@ -70,6 +115,6 @@ export function useSeededSellEntry({
       participations: quote.participations,
     })
 
-    if (result.applied) hasSeededRef.current = true
-  }, [hasOpenPosition, purchase, quoteBuy, roundStart])
+    if (result.applied) seededRoundRef.current = roundStart
+  }, [hasCompletedSale, hasOpenPosition, purchase, quoteBuy, roundStart])
 }
