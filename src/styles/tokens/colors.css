@@ -18,9 +18,11 @@
   --color-action-primary-default-start: #4b20ff;
   --color-action-primary-default-end: #9730ff;
   --color-background-success: rgb(52 211 153 / 0.16);
+  --color-background-error: rgb(248 113 113 / 0.16);
   --color-background-success-solid: #04110c;
   --color-background-app: #000;
   --color-background-opacity-secondary: rgb(251 251 251 / 0.1);
+  --color-background-opacity-quaternary: rgb(251 251 251 / 0.06);
   --color-background-primary-gradient-start: #191919;
   --color-background-primary-gradient-end: #0f0f0f;
   --color-component-earned: #fbbf24;
