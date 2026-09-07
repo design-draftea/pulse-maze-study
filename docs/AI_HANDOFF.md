@@ -1,6 +1,15 @@
 # Handoff entre Codex e Claude
 
-## Em andamento — teste de onboarding sem refresh
+## Remoção de refresh em todas as tarefas — 2026-09-07
+
+- Branch `fix/maze-no-refresh-all`, base `fe24603`, worktree isolado; questionário local preservado.
+- Onboarding, compra, venda e acompanhamento encerram na página atual, sem opt-in. Mantidas esperas e proteções do widget.
+- Arquivos: serviço mazeStep, duas suítes Maze, contexto e handoff.
+- Validação: 35 testes Maze, lint, build e diff-check passaram. Harness temporário no Chrome confirmou as quatro URLs finais, clique de encerramento e mesmo identificador de carregamento; removido após QA. Widget simulado, sem afirmar validação dos quatro relatórios reais.
+- Onboarding já validado no estudo publicado da etapa anterior: 100% concluído, sucesso indireto, URL final registrada sem reclassificação.
+- Commit, PR, merge e deploy autorizados pela pessoa usuária; resultados da publicação serão registrados no PR.
+
+## Histórico — teste de onboarding sem refresh
 
 - Data: 2026-09-07. Branch: `fix/maze-onboarding-no-refresh`, base `origin/main` em `b56f84e`, worktree `.worktrees/maze-onboarding-no-refresh`.
 - Objetivo: validar somente o onboarding no Maze publicado sem recarregar a página antes de encerrar.

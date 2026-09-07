@@ -148,3 +148,8 @@ Uma tarefa só pode ser descrita como concluída quando o escopo solicitado foi 
 4. Pull Request;
 5. merge;
 6. deploy e ambiente validado.
+
+## Encerramento das tarefas Maze
+
+- Os quatro marcos finais atualizam a URL e acionam o botão real do widget na mesma página, sem refresh e sem parâmetro experimental. Preservam a espera visual de 1,2s e a estabilidade do botão por 2s. O botão manual permanece disponível se a integração não puder encerrar.
+- Um estudo publicado de onboarding confirmou URL final e sucesso sem recarga; isso não garante classificação direta nem valida as outras tarefas no relatório.
