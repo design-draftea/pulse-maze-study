@@ -1,5 +1,16 @@
 # Handoff entre Codex e Claude
 
+## Em andamento — teste de onboarding sem refresh
+
+- Data: 2026-09-07. Branch: `fix/maze-onboarding-no-refresh`, base `origin/main` em `b56f84e`, worktree `.worktrees/maze-onboarding-no-refresh`.
+- Objetivo: validar somente o onboarding no Maze publicado sem recarregar a página antes de encerrar.
+- Implementação: parâmetro opt-in `mazeNoReload=onboarding`; somente `onboarding-complete` retoma o encerramento na página atual. Mantém as esperas existentes para isolar o efeito da recarga. Outros fluxos e links sem parâmetro preservam o comportamento.
+- Arquivos alterados: `src/services/mazeStep.ts`, `tests/mazeAutoEnd.test.ts`, este documento.
+- Validação: 39 testes Maze, lint e build passaram; aviso preexistente de chunk >500kB. Navegação real pelas quatro etapas do onboarding local chegou a `onboarding-complete`. Testes verificam zero recargas e um clique no widget simulado; isso não comprova classificação pelo Maze real.
+- URL local: http://127.0.0.1:5194/?mazeNoReload=onboarding . Servidor iniciado na porta 5194.
+- Pendente: publicação autorizada da variante, estudo isolado com apenas Website Test de onboarding e path gravado usando o mesmo parâmetro, resposta real e inspeção de URL final, classificação original (sem reclassificar) e duração.
+- Nenhum commit, PR, merge ou deploy desta variante. Não modificar o questionário com alterações locais no checkout principal.
+
 ## Estado atual — coluna mobile no desktop
 
 - Data: 2026-09-06. Branch: `fix/maze-desktop-frame`, criada de `origin/main` atualizada, checkout inicialmente limpo.

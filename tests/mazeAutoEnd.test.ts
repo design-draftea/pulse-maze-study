@@ -6,12 +6,13 @@ const base = 'https://example.com/?lwt=true'
 function setup({ frame = true, blocked = false } = {}) {
   let now = 1000
   let clicks = 0
+  let reloads = 0
   const values = new Map<string, string>()
   const timers: Array<() => void> = []
   const button = { disabled: false, textContent: 'Encerrar tarefa', click: () => { clicks++ } }
   const doc = { getElementById: () => frame ? { contentDocument: { querySelectorAll: () => [button] } } : null }
   const win = {
-    location: { href: base, reload() {} },
+    location: { href: base, reload() { reloads++ } },
     sessionStorage: {
       getItem: (key: string) => { if (blocked) throw Error(); return values.get(key) },
       setItem: (key: string, value: string) => values.set(key, value),
@@ -23,7 +24,34 @@ function setup({ frame = true, blocked = false } = {}) {
   Object.assign(globalThis, { window: win, document: doc })
   const originalNow = Date.now
   Date.now = () => now
-  return { win, values, button, clicks: () => clicks, advance(ms = 250) { now += ms; timers.splice(0).forEach(run => run()) }, restore() { Date.now = originalNow; Reflect.deleteProperty(globalThis, 'window'); Reflect.deleteProperty(globalThis, 'document') } }
+  return { win, values, button, clicks: () => clicks, reloads: () => reloads, advance(ms = 250) { now += ms; timers.splice(0).forEach(run => run()) }, restore() { Date.now = originalNow; Reflect.deleteProperty(globalThis, 'window'); Reflect.deleteProperty(globalThis, 'document') } }
+}
+
+test('experimento encerra onboarding uma vez sem recarregar', () => {
+  const env = setup()
+  try {
+    env.win.location.href += '&mazeNoReload=onboarding'
+    markMazeStep('onboarding-complete')
+    env.advance(1200)
+    env.advance(2000)
+    env.advance(5000)
+    assert.equal(env.reloads(), 0)
+    assert.equal(env.clicks(), 1)
+    assert.equal(new URL(env.win.location.href).searchParams.get('mazeStep'), 'onboarding-complete')
+  } finally { env.restore() }
+})
+
+for (const step of ['onboarding-complete', 'purchase-complete', 'sale-complete', 'past-entries-open'] as const) {
+  test(`experimento preserva recarga fora do onboarding opt-in: ${step}`, () => {
+    const env = setup()
+    try {
+      if (step !== 'onboarding-complete') env.win.location.href += '&mazeNoReload=onboarding'
+      markMazeStep(step)
+      env.advance(1200)
+      assert.equal(env.reloads(), 1)
+      assert.equal(env.clicks(), 0)
+    } finally { env.restore() }
+  })
 }
 
 for (const step of ['onboarding-complete', 'purchase-complete', 'sale-complete', 'past-entries-open'] as const) {
