@@ -201,16 +201,10 @@ test('sem parâmetros do Maze, a URL continua enxuta', () => {
 
 
 // ---------------------------------------------------------------------------
-// Recarga no passo de sucesso
+// Conclusão sem recarga
 // ---------------------------------------------------------------------------
 
-/**
- * O snippet do Maze não intercepta `pushState` nem `replaceState`, e a
- * documentação deles diz que uma URL alterada sem recarregamento não é
- * detectada numa aplicação de página única. Sem a recarga, a pessoa chega ao fim
- * da tarefa e o bloco nunca fecha.
- */
-test('o passo de sucesso recarrega a página', () => {
+test('o passo de sucesso preserva a página', () => {
   const fake = installWindow(`${BASE}?mazeStep=buy-betslip-open`)
 
   markMazeStep('purchase-complete')
@@ -219,7 +213,7 @@ test('o passo de sucesso recarrega a página', () => {
   assert.equal(fake.reloads, 0, 'não pode recarregar antes do aviso aparecer')
 
   correrTemporizadores(fake)
-  assert.equal(fake.reloads, 1)
+  assert.equal(fake.reloads, 0)
 })
 
 test('os passos intermediários não recarregam', () => {
@@ -232,7 +226,7 @@ test('os passos intermediários não recarregam', () => {
   assert.equal(fake.reloads, 0)
 })
 
-test('os quatro passos de sucesso recarregam', () => {
+test('os quatro passos de sucesso preservam a página', () => {
   const finais = [
     'onboarding-complete',
     'purchase-complete',
@@ -245,16 +239,16 @@ test('os quatro passos de sucesso recarregam', () => {
     markMazeStep(step)
     correrTemporizadores(fake)
 
-    assert.equal(fake.reloads, 1, `${step} não recarregou`)
+    assert.equal(fake.reloads, 0, `${step} recarregou`)
   })
 })
 
-test('a URL já está correta antes da recarga', () => {
+test('a URL já está correta antes do encerramento', () => {
   const fake = installWindow(`${BASE}?task=sell&lwt=true#entradas`)
 
   markMazeStep('sale-complete')
 
-  // A recarga acontece sobre esta URL, então é ela que o Maze vai registrar.
+  // O widget recebe a URL final antes do encerramento.
   assert.equal(
     fake.location.href,
     `${BASE}?task=sell&mazeStep=sale-complete&lwt=true#entradas`,

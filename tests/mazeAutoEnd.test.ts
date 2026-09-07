@@ -42,25 +42,11 @@ test('experimento encerra onboarding uma vez sem recarregar', () => {
 })
 
 for (const step of ['onboarding-complete', 'purchase-complete', 'sale-complete', 'past-entries-open'] as const) {
-  test(`experimento preserva recarga fora do onboarding opt-in: ${step}`, () => {
-    const env = setup()
-    try {
-      if (step !== 'onboarding-complete') env.win.location.href += '&mazeNoReload=onboarding'
-      markMazeStep(step)
-      env.advance(1200)
-      assert.equal(env.reloads(), 1)
-      assert.equal(env.clicks(), 0)
-    } finally { env.restore() }
-  })
-}
-
-for (const step of ['onboarding-complete', 'purchase-complete', 'sale-complete', 'past-entries-open'] as const) {
-  test(`${step}: sobrevive à recarga e clica uma só vez após widget estabilizar`, () => {
+  test(`${step}: encerra sem recarga e clica uma só vez após widget estabilizar`, () => {
     const env = setup()
     try {
       markMazeStep(step)
       env.advance(1200)
-      resumeMazeAutoEnd()
       env.advance(1000)
       assert.equal(env.clicks(), 0)
       env.advance(1000)
@@ -68,6 +54,7 @@ for (const step of ['onboarding-complete', 'purchase-complete', 'sale-complete',
       resumeMazeAutoEnd()
       env.advance(3000)
       assert.equal(env.clicks(), 1)
+      assert.equal(env.reloads(), 0)
     } finally { env.restore() }
   })
 }

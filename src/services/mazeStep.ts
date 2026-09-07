@@ -79,11 +79,11 @@ export const MAZE_COMPLETION_STEPS: ReadonlySet<MazeStep> = new Set([
 ])
 
 /**
- * Espera antes de recarregar, para o aviso de sucesso e a saída do bottom sheet
- * terminarem de aparecer. Recarregar no mesmo quadro apagaria da tela — e da
+ * Espera antes de encerrar, para o aviso de sucesso e a saída do bottom sheet
+ * terminarem de aparecer. Encerrar no mesmo quadro apagaria da tela — e da
  * gravação — a confirmação que a pessoa acabou de conquistar.
  */
-export const MAZE_COMPLETION_RELOAD_DELAY_MS = 1_200
+export const MAZE_COMPLETION_END_DELAY_MS = 1_200
 
 const AUTO_END_KEY = 'pulse.maze-auto-end.v1'
 const TESTER_FRAME_ID = 'maze-tester-widget'
@@ -104,7 +104,7 @@ export const findMazeEndButton = (doc: Document): HTMLButtonElement | undefined 
   }
 }
 
-/** Consome somente uma conclusão real armada antes da recarga nesta aba. */
+/** Consome somente uma conclusão real armada nesta aba. */
 export const resumeMazeAutoEnd = () => {
   let pending: { href: string; createdAt: number }
   try {
@@ -129,7 +129,7 @@ export const resumeMazeAutoEnd = () => {
       candidate = button
       readySince = Date.now()
     }
-    // Dá tempo ao snippet após a recarga. Não é confirmação de upload do Maze;
+    // Dá tempo ao snippet para observar a URL final. Não é confirmação de upload do Maze;
     // a classificação do path ainda exige validação no estudo publicado.
     if (button && Date.now() - readySince >= 2_000) {
       button.click()
@@ -148,16 +148,9 @@ export const resumeMazeAutoEnd = () => {
  * `pushState`, e uma entrada por marco faria o botão voltar exigir vários toques
  * no meio da missão.
  *
- * O passo de sucesso precisa de mais que isso. O snippet do Maze não intercepta
- * `pushState` nem `replaceState` — os dois estão nativos na página — e a
- * documentação deles diz que, numa aplicação de página única, uma URL alterada
- * sem recarregamento não é detectada. Sem um carregamento de verdade, o
- * marco final pode deixar de ser registrado. A recarga não encerra a missão:
- * no Website Test isso depende do botão End task.
- *
- * Então o último passo reescreve a URL e recarrega. O custo é a tela piscar uma
- * vez, no instante em que a tarefa já terminou; a carteira e o onboarding vivem
- * em `localStorage` e sobrevivem à recarga.
+ * Os quatro marcos finais encerram pelo botão real do widget na página atual.
+ * O teste publicado de onboarding confirmou o registro da URL sem recarga.
+ * Mantemos as esperas para a confirmação visual e a estabilização do widget.
  */
 export const markMazeStep = (step: MazeStep) => {
   if (typeof window === 'undefined') return
@@ -182,16 +175,5 @@ export const markMazeStep = (step: MazeStep) => {
     }
   } catch { /* Armazenamento bloqueado: o botão manual continua disponível. */ }
 
-  // Experimento restrito ao onboarding. Mantém a mesma espera e o botão real
-  // do Maze; a única diferença é não recarregar antes de encerrar a tarefa.
-  if (step === 'onboarding-complete'
-    && new URL(window.location.href).searchParams.get('mazeNoReload') === 'onboarding') {
-    window.setTimeout(resumeMazeAutoEnd, MAZE_COMPLETION_RELOAD_DELAY_MS)
-    return
-  }
-
-  window.setTimeout(
-    () => window.location.reload(),
-    MAZE_COMPLETION_RELOAD_DELAY_MS,
-  )
+  window.setTimeout(resumeMazeAutoEnd, MAZE_COMPLETION_END_DELAY_MS)
 }
