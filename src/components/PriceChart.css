@@ -57,6 +57,28 @@
   will-change: opacity;
 }
 
+/* A cor da série vem do gradiente inline com parada dura na altura do objetivo;
+   este stroke é o padrão de quando ainda não há objetivo definido. */
+.price-chart__area-stop {
+  stop-color: #fbfbfb;
+}
+
+.price-chart--above-target .price-chart__area-stop {
+  stop-color: var(--color-fill-success);
+}
+
+.price-chart--below-target .price-chart__area-stop {
+  stop-color: var(--color-fill-error);
+}
+
+.price-chart__line-stop--above {
+  stop-color: var(--color-fill-success);
+}
+
+.price-chart__line-stop--below {
+  stop-color: var(--color-fill-error);
+}
+
 .price-chart__line {
   fill: none;
   stroke: #fbfbfb;
@@ -139,16 +161,10 @@
   vector-effect: non-scaling-stroke;
 }
 
-/* Travada, a linha usa fillPrimary; dentro da faixa recua para fillTertiary.
-   A diferença vem dos assets do Figma, que exportam a mesma linha com e sem
-   opacidade de 50%. */
+/* A linha só existe dentro da faixa; travada, o indicador vive na borda sem
+   ela. Ali o traço afirmaria uma altura que não é a do objetivo. */
 .price-chart__target--none .price-chart__target-line {
   stroke: var(--color-fill-tertiary);
-}
-
-.price-chart__target--above .price-chart__target-line,
-.price-chart__target--below .price-chart__target-line {
-  stroke: var(--color-fill-primary);
 }
 
 .price-chart__target-pill {
@@ -211,6 +227,62 @@
 
 .price-chart__entry--down text {
   fill: #f87171;
+}
+
+.price-chart__scrub-line {
+  stroke: rgba(251, 251, 251, 0.35);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.price-chart__scrub-halo {
+  fill: rgba(251, 251, 251, 0.16);
+}
+
+.price-chart__scrub-point {
+  fill: #fbfbfb;
+  stroke: #111;
+  stroke-width: 1.5;
+}
+
+.price-chart__scrub-tooltip {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--color-background-primary-gradient-start);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.5);
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  white-space: nowrap;
+  font-feature-settings:
+    'lnum' 1,
+    'tnum' 1;
+}
+
+.price-chart__scrub-tooltip strong {
+  color: var(--color-fill-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.price-chart__scrub-tooltip span {
+  color: var(--color-fill-tertiary);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Durante a leitura o gráfico fica quieto: o pulso do marcador, os chevrons de
+   direção e as entradas simuladas disputariam a atenção com o valor lido. */
+.price-chart--scrubbing .price-chart__point-halo {
+  animation: none;
+}
+
+.price-chart--scrubbing .price-chart__direction {
+  opacity: 0;
 }
 
 .price-chart__live-value {
@@ -316,19 +388,21 @@
   left: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
   padding: 12px 24px 0;
 }
 
 .price-chart__range-button {
   display: inline-flex;
-  width: 60px;
+  min-width: 0;
   height: 22px;
-  flex: 0 0 60px;
+  /* Cinco faixas não cabem em cinco larguras fixas de 60px a 320px, onde a
+     fileira só dispõe de 272px. Elas passam a dividir o espaço disponível. */
+  flex: 1 1 0;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 2px 12px;
+  padding: 2px 8px;
   border: 0;
   border-radius: 100px;
   background: var(--color-fill-opacity-quinary);
@@ -346,6 +420,21 @@
 .price-chart__range-button--active {
   background: var(--color-fill-opacity-primary);
   color: var(--color-fill-primary);
+}
+
+.price-chart__round-close line {
+  stroke: rgba(251, 251, 251, 0.18);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.price-chart__round-close text {
+  fill: var(--color-fill-tertiary);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .price-chart__range-live-dot {

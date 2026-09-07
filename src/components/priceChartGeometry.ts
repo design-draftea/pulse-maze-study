@@ -11,7 +11,6 @@ export type PriceChartGeometry = {
   seriesRight: number
   currentLabelX: number
   priceLabelX: number
-  directionIconX: number
 }
 const clampUnit = (value: number) => Math.min(1, Math.max(0, value))
 
@@ -45,6 +44,5 @@ export const getPriceChartGeometry = (
     seriesRight,
     currentLabelX: plotRight,
     priceLabelX: width - PRICE_LABEL_RIGHT_INSET,
-    directionIconX: seriesRight + 10,
   }
 }

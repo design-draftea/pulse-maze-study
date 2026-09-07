@@ -1,22 +1,24 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  DOMAIN_CONTRACTION_DELAY_MS,
+  DOMAIN_SHIFT_CONFIRMATION_MS,
+  LIVE_MINIMUM_GRID_STEP,
+  LIVE_WINDOW_DURATION_MS,
+  ROUND_WINDOW_DURATION_MS,
   appendRollingPricePoint,
   appendRoundPricePoint,
   calculatePriceChartDomain,
   clampPriceChartAnchor,
-  countPricePointGaps,
   connectPriceChartEndpoint,
-  DOMAIN_CONTRACTION_DELAY_MS,
-  DOMAIN_SHIFT_CONFIRMATION_MS,
+  countPricePointGaps,
   getContinuousVisiblePricePoints,
   getPriceChartRangeConfig,
   getPriceChartTimeTicks,
   getPriceChartWindowPoints,
   interpolatePriceAt,
   interpolatePriceChartDomain,
-  LIVE_WINDOW_DURATION_MS,
-  LIVE_MINIMUM_GRID_STEP,
+  isRollingPriceChartRange,
   mergePricePointSeries,
   projectPriceToY,
   resolvePriceChartTarget,
@@ -45,7 +47,7 @@ test('LIVE revela oscilações pequenas com piso de 25 centavos sem mudar o padr
     { timestamp: 0, value: 79670.55 },
     { timestamp: 30000, value: 79671.28 },
   ]
-  const options = { applyTrendShift: false, includeAllPoints: true }
+  const options = { includeAllPoints: true }
   const live = calculatePriceChartDomain(points, 79664.53, {
     ...options, minimumGridStep: LIVE_MINIMUM_GRID_STEP,
   })
@@ -63,7 +65,7 @@ test('LIVE revela oscilações pequenas com piso de 25 centavos sem mudar o padr
 test('LIVE amplia para movimentos fortes e espera cinco segundos antes de voltar ao piso menor', () => {
   const calm = [{ timestamp: 0, value: 100 }, { timestamp: 1000, value: 100.1 }]
   const volatile = [...calm, { timestamp: 2000, value: 120 }]
-  const options = { includeAllPoints: true, applyTrendShift: false, minimumGridStep: LIVE_MINIMUM_GRID_STEP }
+  const options = { includeAllPoints: true, minimumGridStep: LIVE_MINIMUM_GRID_STEP }
   const small = calculatePriceChartDomain(calm, null, options)
   const large = calculatePriceChartDomain(volatile, null, options)
   let state = stabilizePriceChartDomain(null, small, calm, 0, options)
@@ -281,33 +283,89 @@ test('projeta início, meio e presente da janela LIVE nas posições corretas', 
   assert.deepEqual(visible.points.map(({ x }) => x), [0, 120, 240])
 })
 
-test('mantém exatamente três horários em posições fixas e distribuídas', () => {
+test('cada horário do eixo cai no x que a projeção da série prevê', () => {
   const anchorTime = Date.UTC(2026, 8, 4, 10, 54, 48)
-
-  assert.deepEqual(
-    getPriceChartTimeTicks(anchorTime, 2 * 60_000, 16, 236, 24),
-    [
-      { timestamp: Date.UTC(2026, 8, 4, 10, 50, 0), x: 40 },
-      { timestamp: Date.UTC(2026, 8, 4, 10, 52, 0), x: 126 },
-      { timestamp: Date.UTC(2026, 8, 4, 10, 54, 0), x: 212 },
-    ],
+  const seriesRight = 236
+  // 5M: a janela inteira ocupa a largura da série, então cada segundo vale
+  // `seriesRight / 300` pixels e a marcação de 10:52 fica a 168s da âncora.
+  const { pixelsPerSecond } = getPriceChartRangeConfig('5m', seriesRight)
+  const ticks = getPriceChartTimeTicks(
+    anchorTime,
+    2 * 60_000,
+    16,
+    seriesRight,
+    pixelsPerSecond,
   )
 
+  for (const { timestamp, x } of ticks) {
+    const expectedX = seriesRight
+      - ((anchorTime - timestamp) / 1000) * pixelsPerSecond
+
+    assert.ok(Math.abs(x - expectedX) < 1e-9)
+  }
+
+  const latest = ticks.find(
+    ({ timestamp }) => timestamp === Date.UTC(2026, 8, 4, 10, 54, 0),
+  )
+  assert.ok(latest !== undefined)
+  assert.ok(Math.abs(latest.x - (seriesRight - 48 * pixelsPerSecond)) < 1e-9)
+})
+
+test('o eixo temporal cobre a série inteira e descarta o que ficaria fora', () => {
+  const anchorTime = Date.UTC(2026, 8, 4, 10, 54, 48)
+  const seriesRight = 236
+  const { pixelsPerSecond } = getPriceChartRangeConfig('1h', seriesRight)
+  const ticks = getPriceChartTimeTicks(
+    anchorTime,
+    20 * 60_000,
+    16,
+    seriesRight,
+    pixelsPerSecond,
+  )
+  const spacing = 20 * 60 * pixelsPerSecond
+
+  assert.ok(ticks.every(({ x }) => x >= 16 - spacing && x <= seriesRight))
+  assert.ok(ticks.some(({ x }) => x <= 16))
   assert.deepEqual(
-    getPriceChartTimeTicks(anchorTime, 20 * 60_000, 16, 236, 24),
-    [
-      { timestamp: Date.UTC(2026, 8, 4, 10, 0, 0), x: 40 },
-      { timestamp: Date.UTC(2026, 8, 4, 10, 20, 0), x: 126 },
-      { timestamp: Date.UTC(2026, 8, 4, 10, 40, 0), x: 212 },
-    ],
+    ticks.map(({ timestamp }) => timestamp).sort((a, b) => a - b).at(-1),
+    Date.UTC(2026, 8, 4, 10, 40, 0),
   )
 })
 
-test('redistribui os três horários sem cortar os rótulos em telas estreitas', () => {
-  const ticks = getPriceChartTimeTicks(20_000, 5_000, 16, 181, 24)
+test('a rodada é uma janela parada de quinze minutos', () => {
+  const seriesRight = 236
+  const config = getPriceChartRangeConfig('ronda', seriesRight)
 
-  assert.equal(ticks.length, 3)
-  assert.deepEqual(ticks.map(({ x }) => x), [40, 98.5, 157])
+  assert.equal(config.durationMs, ROUND_WINDOW_DURATION_MS)
+  assert.equal(config.timeTickIntervalMs, 5 * 60_000)
+  assert.equal(config.pixelsPerSecond, seriesRight / (15 * 60))
+  assert.equal(isRollingPriceChartRange('ronda'), false)
+  assert.equal(isRollingPriceChartRange('live'), true)
+  assert.equal(isRollingPriceChartRange('15m'), true)
+})
+
+test('o objetivo travado informa a distância assinada até o preço atual', () => {
+  const abaixo = resolvePriceChartTarget(
+    80_000,
+    TARGET_DOMAIN,
+    TARGET_DOMAIN,
+    PLOT_TOP,
+    PLOT_BOTTOM,
+    80_038.29,
+  )
+  const acima = resolvePriceChartTarget(
+    80_400,
+    TARGET_DOMAIN,
+    TARGET_DOMAIN,
+    PLOT_TOP,
+    PLOT_BOTTOM,
+    80_338.29,
+  )
+
+  assert.equal(abaixo?.clamp, 'below')
+  assert.ok(Math.abs((abaixo?.distance ?? 0) + 38.29) < 1e-9)
+  assert.equal(acima?.clamp, 'above')
+  assert.ok(Math.abs((acima?.distance ?? 0) - 61.71) < 1e-9)
 })
 
 test('o domínio de um range considera todos os pontos visíveis', () => {
@@ -320,7 +378,6 @@ test('o domínio de um range considera todos os pontos visíveis', () => {
   ]
   const liveDomain = calculatePriceChartDomain(points, null)
   const rangeDomain = calculatePriceChartDomain(points, null, {
-    applyTrendShift: false,
     includeAllPoints: true,
   })
 
@@ -450,12 +507,14 @@ test('amplia o domínio imediatamente e atrasa a contração por cinco segundos'
   assert.equal(expanded.domain, expandedDomain)
 })
 
-test('confirma a tendência antes de deslocar o domínio no mesmo passo', () => {
+test('confirma a deriva do centro antes de reenquadrar no mesmo passo', () => {
   const currentDomain: PriceChartDomain = { bottom: 100, top: 115, step: 2.5 }
   const shiftedDomain: PriceChartDomain = { bottom: 105, top: 120, step: 2.5 }
+  // Dentro da faixa e longe das bordas, mas com o centro do dado a um terço do
+  // vão acima do centro do domínio: é a deriva, e não a tendência, que decide.
   const points = [
-    { timestamp: 1_000, value: 109 },
-    { timestamp: 2_000, value: 112 },
+    { timestamp: 1_000, value: 111.5 },
+    { timestamp: 2_000, value: 113.5 },
   ]
   const initial = {
     domain: currentDomain,
@@ -476,17 +535,32 @@ test('confirma a tendência antes de deslocar o domínio no mesmo passo', () => 
   assert.equal(shifted.domain, shiftedDomain)
 })
 
+test('um dado centrado na faixa não reenquadra, por mais que oscile', () => {
+  const currentDomain: PriceChartDomain = { bottom: 100, top: 115, step: 2.5 }
+  const candidate: PriceChartDomain = { bottom: 102.5, top: 117.5, step: 2.5 }
+  const initial = {
+    domain: currentDomain,
+    contractionCandidateKey: null,
+    contractionStartedAt: null,
+    shiftCandidateKey: null,
+    shiftStartedAt: null,
+  }
+  const points = [
+    { timestamp: 1_000, value: 106 },
+    { timestamp: 2_000, value: 109 },
+  ]
+  let state = stabilizePriceChartDomain(initial, candidate, points, 10_000)
+  state = stabilizePriceChartDomain(state, candidate, points, 20_000)
+
+  assert.equal(state.domain, currentDomain)
+})
+
 test('interpola o domínio em valores intermediários durante a transição', () => {
   const from: PriceChartDomain = { bottom: 100, top: 115, step: 2.5 }
   const to: PriceChartDomain = { bottom: 110, top: 140, step: 5 }
   const halfway = interpolatePriceChartDomain(from, to, 0.5)
 
-  assert.deepEqual(halfway, {
-    bottom: 105,
-    top: 127.5,
-    step: 3.75,
-    trendShiftIntervals: undefined,
-  })
+  assert.deepEqual(halfway, { bottom: 105, top: 127.5, step: 3.75 })
   assert.deepEqual(interpolatePriceChartDomain(from, to, 1), to)
 })
 
@@ -565,7 +639,7 @@ test('o arrasto para no ponto mais antigo e não avança além do último', () =
   )
 })
 
-test('o domínio da janela arrastada não desloca pela tendência', () => {
+test('uma alta contínua é centrada na faixa, não empurrada para uma borda', () => {
   const roundStart = Date.UTC(2026, 8, 1, 10, 30, 0)
   const climbing = Array.from({ length: 8 }, (_, index) => ({
     timestamp: roundStart + index * 1_000,
@@ -573,13 +647,83 @@ test('o domínio da janela arrastada não desloca pela tendência', () => {
   }))
   const live = calculatePriceChartDomain(climbing, null)
   const panned = calculatePriceChartDomain(climbing, null, {
-    applyTrendShift: false,
+    includeAllPoints: true,
   })
 
-  assert.equal(live.trendShiftIntervals, 2)
-  assert.equal(panned.trendShiftIntervals, 0)
-  assert.equal(live.step, panned.step)
-  assert.equal(live.bottom - panned.bottom, panned.step * 2)
+  // A janela ao vivo e a arrastada passaram a usar exatamente a mesma regra.
+  assert.deepEqual(live, panned)
+  assert.ok(live.bottom < 100 && live.top > 114)
+})
+
+test('o domínio considera o preço ao vivo, e não apenas a série', () => {
+  const points = [
+    { timestamp: 1_000, value: 100 },
+    { timestamp: 2_000, value: 101 },
+  ]
+  const semPrecoAoVivo = calculatePriceChartDomain(points, null, {
+    includeAllPoints: true,
+  })
+  const comPrecoAoVivo = calculatePriceChartDomain(points, null, {
+    includeAllPoints: true,
+    livePrice: 130,
+  })
+
+  assert.ok(semPrecoAoVivo.top < 130)
+  assert.ok(comPrecoAoVivo.top > 130)
+  assert.ok(comPrecoAoVivo.bottom < 100)
+})
+
+test('série e preço ao vivo nunca encostam nos limites do domínio', () => {
+  const cenarios = [
+    { valores: [100, 101], livePrice: null },
+    { valores: [79670.55, 79671.28], livePrice: 79672.4 },
+    { valores: [100, 100], livePrice: null },
+    { valores: [80400, 80500], livePrice: 80260 },
+  ]
+
+  for (const { valores, livePrice } of cenarios) {
+    const points = valores.map((value, index) => ({
+      timestamp: index * 1_000,
+      value,
+    }))
+    const domain = calculatePriceChartDomain(points, null, {
+      includeAllPoints: true,
+      livePrice,
+      minimumGridStep: LIVE_MINIMUM_GRID_STEP,
+    })
+    const desenhados = livePrice === null ? valores : [...valores, livePrice]
+
+    assert.ok(
+      Math.min(...desenhados) > domain.bottom,
+      `mínimo encostou na base em ${JSON.stringify(valores)}`,
+    )
+    assert.ok(
+      Math.max(...desenhados) < domain.top,
+      `máximo encostou no topo em ${JSON.stringify(valores)}`,
+    )
+  }
+})
+
+test('o preço ao vivo escapando da faixa amplia o domínio na hora', () => {
+  const currentDomain: PriceChartDomain = { bottom: 100, top: 115, step: 2.5 }
+  const candidate: PriceChartDomain = { bottom: 100, top: 130, step: 5 }
+  const points = [
+    { timestamp: 1_000, value: 106 },
+    { timestamp: 2_000, value: 107 },
+  ]
+  const initial = {
+    domain: currentDomain,
+    contractionCandidateKey: null,
+    contractionStartedAt: null,
+    shiftCandidateKey: null,
+    shiftStartedAt: null,
+  }
+  const state = stabilizePriceChartDomain(initial, candidate, points, 10_000, {
+    includeAllPoints: true,
+    livePrice: 128,
+  })
+
+  assert.equal(state.domain, candidate)
 })
 
 test('mantém a linha desenhada quando a janela cai entre dois pontos distantes', () => {
@@ -664,8 +808,8 @@ test('preço objetivo acima do domínio trava no topo e abaixo trava na base', (
     PLOT_BOTTOM,
   )
 
-  assert.deepEqual(above, { y: 16, clamp: 'above' })
-  assert.deepEqual(below, { y: 220, clamp: 'below' })
+  assert.deepEqual(above, { y: 16, clamp: 'above', distance: null })
+  assert.deepEqual(below, { y: 220, clamp: 'below', distance: null })
 })
 
 test('as bordas do domínio ainda contam como dentro da faixa', () => {
@@ -684,8 +828,8 @@ test('as bordas do domínio ainda contam como dentro da faixa', () => {
     PLOT_BOTTOM,
   )
 
-  assert.deepEqual(atTop, { y: 16, clamp: 'none' })
-  assert.deepEqual(atBottom, { y: 220, clamp: 'none' })
+  assert.deepEqual(atTop, { y: 16, clamp: 'none', distance: null })
+  assert.deepEqual(atBottom, { y: 220, clamp: 'none', distance: null })
 })
 
 test('o travamento vem do domínio estabilizado e a posição do interpolado', () => {
@@ -699,7 +843,7 @@ test('o travamento vem do domínio estabilizado e a posição do interpolado', (
     PLOT_BOTTOM,
   )
 
-  assert.deepEqual(placement, { y: 16, clamp: 'above' })
+  assert.deepEqual(placement, { y: 16, clamp: 'above', distance: null })
 })
 
 test('objetivo dentro do domínio estabilizado nunca escapa da faixa', () => {
@@ -768,4 +912,137 @@ test('travado e no topo do domínio caem no mesmo y, e só o clamp os separa', (
 
   assert.equal(atTop?.y, above?.y)
   assert.notEqual(atTop?.clamp, above?.clamp)
+})
+
+// Replay determinístico do LIVE: feed esparso de ~6s, quinze minutos de rodada
+// e um preço ao vivo interpolado entre as amostras, que é exatamente o que o
+// marcador desenha. Antes desta série de mudanças o marcador saía do plot na
+// maior parte dos quadros, porque o domínio era calculado sem ele.
+const replayLivePriceChart = (
+  { feedIntervalMs, drift, noise }: {
+    feedIntervalMs: number
+    drift: number
+    noise: number
+  },
+) => {
+  const PLOT_TOP = 16
+  const PLOT_BOTTOM = 220
+  const roundStart = Date.UTC(2026, 8, 6, 21, 0, 0)
+  const roundEnd = roundStart + 15 * 60_000
+  let seed = 20260906
+  const random = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648
+    return seed / 2147483648
+  }
+
+  const points: PricePoint[] = []
+  let value = 80_000
+  for (
+    let timestamp = roundStart;
+    timestamp <= roundEnd;
+    timestamp += feedIntervalMs
+  ) {
+    value += drift * (feedIntervalMs / 60_000) + (random() - 0.5) * noise
+    points.push({ timestamp, value })
+  }
+
+  const targetPrice = points[0].value
+  const options = {
+    includeAllPoints: true,
+    minimumGridStep: LIVE_MINIMUM_GRID_STEP,
+  }
+  let state: ReturnType<typeof stabilizePriceChartDomain> | null = null
+  const domains = new Set<string>()
+  let outsidePlot = 0
+  let frames = 0
+  let stepChanges = 0
+  let previousStep = 0
+
+  // O marcador não desenha o último ponto da série: desenha o valor animado, que
+  // parte de onde estava e leva 360ms para alcançar a nova cotação. É essa
+  // defasagem, de poucos centavos, que escapava de uma faixa de US$ 1,50
+  // calculada só a partir dos pontos.
+  let animatedValue = points[0].value
+  let easeStart = points[0].value
+  let easeTarget = points[0].value
+  let easeStartedAt = roundStart
+  let deliveredIndex = 0
+
+  for (let now = roundStart; now <= roundEnd; now += 250) {
+    while (
+      deliveredIndex + 1 < points.length
+      && points[deliveredIndex + 1].timestamp <= now
+    ) {
+      deliveredIndex += 1
+      easeStart = animatedValue
+      easeTarget = points[deliveredIndex].value
+      easeStartedAt = points[deliveredIndex].timestamp
+    }
+
+    const progress = Math.min(1, (now - easeStartedAt) / 360)
+    animatedValue = easeStart
+      + (easeTarget - easeStart) * (1 - (1 - progress) ** 3)
+
+    const livePrice = animatedValue
+    const windowPoints = getPriceChartWindowPoints(
+      points.slice(0, deliveredIndex + 1),
+      now - LIVE_WINDOW_DURATION_MS,
+      now,
+    )
+    const candidate = calculatePriceChartDomain(windowPoints, targetPrice, {
+      ...options,
+      livePrice,
+    })
+    state = stabilizePriceChartDomain(state, candidate, windowPoints, now, {
+      ...options,
+      livePrice,
+    })
+
+    const y = projectPriceToY(livePrice, state.domain, PLOT_TOP, PLOT_BOTTOM)
+
+    frames += 1
+    domains.add(`${state.domain.bottom}:${state.domain.top}:${state.domain.step}`)
+    if (previousStep !== 0 && state.domain.step !== previousStep) stepChanges += 1
+    previousStep = state.domain.step
+    if (y < PLOT_TOP || y > PLOT_BOTTOM) outsidePlot += 1
+  }
+
+  return { domains: domains.size, frames, outsidePlot, stepChanges }
+}
+
+test('o marcador nunca sai do plot ao longo de uma rodada inteira', () => {
+  const cenarios = [
+    { feedIntervalMs: 6_000, drift: 7, noise: 4 },
+    { feedIntervalMs: 6_000, drift: -7, noise: 4 },
+    { feedIntervalMs: 1_000, drift: 0, noise: 1.5 },
+    { feedIntervalMs: 12_000, drift: 30, noise: 20 },
+  ]
+
+  for (const cenario of cenarios) {
+    const { frames, outsidePlot } = replayLivePriceChart(cenario)
+
+    assert.ok(frames > 3_000)
+    assert.equal(
+      outsidePlot,
+      0,
+      `marcador saiu do plot em ${outsidePlot} de ${frames} quadros`,
+    )
+  }
+})
+
+test('a escala vertical do LIVE troca poucas vezes numa rodada inteira', () => {
+  // Trocar de escala é o que se percebe como salto; reenquadrar no mesmo passo
+  // é a faixa acompanhando a deriva do preço. Guarda de regressão sobre o
+  // comportamento medido neste mesmo replay: o modelo anterior trocava de
+  // escala 51 vezes e reenquadrava 95 vezes em quinze minutos, contra 45 e 79
+  // deste. O ganho aqui é modesto porque a oscilação restante é a do próprio
+  // feed; o que mudou de fato foi o marcador nunca mais sair do plot.
+  const { domains, stepChanges } = replayLivePriceChart({
+    feedIntervalMs: 6_000,
+    drift: 7,
+    noise: 4,
+  })
+
+  assert.ok(stepChanges <= 48, `a escala mudou ${stepChanges} vezes`)
+  assert.ok(domains <= 85, `o domínio mudou ${domains} vezes`)
 })

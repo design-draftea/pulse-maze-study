@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import {
   layoutPriceChartEntries,
   type PriceChartEntry,
@@ -24,6 +24,7 @@ import {
   getPriceChartRangeConfig,
   getPriceChartTimeTicks,
   interpolatePriceAt,
+  isRollingPriceChartRange,
   projectPriceToY,
   resolvePriceChartTarget,
   type PriceChartDomain,
@@ -31,6 +32,7 @@ import {
   type PricePoint,
 } from './priceChartModel'
 import { usePriceChartPan } from '../hooks/usePriceChartPan'
+import { usePriceChartScrub } from '../hooks/usePriceChartScrub'
 import { LiveIndicator } from './LiveIndicator/LiveIndicator'
 import './PriceChart.css'
 
@@ -61,6 +63,7 @@ type PriceChartProps = {
   onViewAnchorChange: (next: number | null) => void
   onWindowSpanChange?: (spanMs: number) => void
   resetReason: 'initial-load' | 'round-change'
+  roundEnd: number
   source: string | null
   status: string
   updatedAt: number | null
@@ -90,9 +93,15 @@ const TIME_AXIS_TICK_BOTTOM = TIME_AXIS_TICK_TOP + 5
 const TIME_AXIS_LABEL_BASELINE = TIME_AXIS_TICK_BOTTOM + 21
 const CURRENT_LABEL_WIDTH = 85
 const GRID_LINE_COUNT = 7
+// Durante a transição de domínio um nível pode projetar-se fora da faixa. Ele
+// não some de vez: some ao longo destes pixels, como qualquer eixo animado.
+const GRID_FADE_DISTANCE = 16
 const TIME_TICK_FADE_DISTANCE = 48
-const TIME_TICK_LABEL_INSET = 24
-const PLOT_FADE_WIDTH = 96
+// 96px sobre uma série de 236px punham 12 dos 30 segundos do LIVE abaixo da
+// opacidade plena. A entrada continua suave com metade disso.
+const PLOT_FADE_WIDTH = 48
+// Taper do rabo da área, para o preenchimento não terminar num corte reto.
+const AREA_TAIL_WIDTH = 18
 const DIRECTION_CLEAR_SIZE = 30
 const DIRECTION_ANIMATION_FALLBACK_MS = 800
 const RENDER_FRAME_INTERVAL = 1000 / 30
@@ -112,25 +121,70 @@ const RANGE_BUTTONS: Array<{
   ariaLabel: string
 }> = [
   { range: 'live', label: 'LIVE', ariaLabel: 'Ver precio en vivo' },
+  { range: 'ronda', label: 'RONDA', ariaLabel: 'Ver la ronda completa' },
   { range: '5m', label: '5M', ariaLabel: 'Ver últimos 5 minutos' },
   { range: '15m', label: '15M', ariaLabel: 'Ver últimos 15 minutos' },
   { range: '1h', label: '1H', ariaLabel: 'Ver última hora' },
 ]
 
+// Interpolação cúbica monotônica (Fritsch–Carlson). A curva anterior usava uma
+// alça horizontal fixa de 45% do vão, com os pontos de controle na mesma altura
+// das extremidades: sobre pontos próximos isso é imperceptível, mas o feed
+// entrega cerca de uma amostra a cada seis segundos, e num vão de ~47px a mesma
+// alça produzia platôs largos e paredes quase verticais — uma forma que os
+// dados não têm. A tangente monotônica respeita a inclinação real de cada
+// trecho e continua incapaz de ultrapassar os valores medidos.
 const getSmoothPath = (points: ChartPoint[]) => {
   if (points.length === 0) return ''
   if (points.length === 1) return `M ${points[0].x} ${points[0].y}`
 
+  const lastIndex = points.length - 1
+  const secants = points.slice(0, lastIndex).map((point, index) => {
+    const run = points[index + 1].x - point.x
+
+    return run === 0 ? 0 : (points[index + 1].y - point.y) / run
+  })
+  const tangents = points.map((_, index) => {
+    if (index === 0) return secants[0]
+    if (index === lastIndex) return secants[lastIndex - 1]
+
+    const previous = secants[index - 1]
+    const next = secants[index]
+
+    return previous * next <= 0 ? 0 : (previous + next) / 2
+  })
+
+  for (let index = 0; index < secants.length; index += 1) {
+    const secant = secants[index]
+
+    if (secant === 0) {
+      tangents[index] = 0
+      tangents[index + 1] = 0
+      continue
+    }
+
+    const first = tangents[index] / secant
+    const second = tangents[index + 1] / secant
+    const magnitude = first ** 2 + second ** 2
+
+    if (magnitude > 9) {
+      const scale = 3 / Math.sqrt(magnitude)
+
+      tangents[index] = scale * first * secant
+      tangents[index + 1] = scale * second * secant
+    }
+  }
+
   let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`
 
-  for (let index = 0; index < points.length - 1; index += 1) {
+  for (let index = 0; index < lastIndex; index += 1) {
     const current = points[index]
     const next = points[index + 1]
-    const handle = Math.max(0, next.x - current.x) * 0.45
-    const controlOneX = current.x + handle
-    const controlTwoX = next.x - handle
+    const run = (next.x - current.x) / 3
+    const controlOneY = current.y + tangents[index] * run
+    const controlTwoY = next.y - tangents[index + 1] * run
 
-    path += ` C ${controlOneX.toFixed(2)} ${current.y.toFixed(2)}, ${controlTwoX.toFixed(2)} ${next.y.toFixed(2)}, ${next.x.toFixed(2)} ${next.y.toFixed(2)}`
+    path += ` C ${(current.x + run).toFixed(2)} ${controlOneY.toFixed(2)}, ${(next.x - run).toFixed(2)} ${controlTwoY.toFixed(2)}, ${next.x.toFixed(2)} ${next.y.toFixed(2)}`
   }
 
   return path
@@ -251,6 +305,7 @@ export function PriceChart({
   onViewAnchorChange,
   onWindowSpanChange,
   resetReason,
+  roundEnd,
   source,
   status,
   updatedAt,
@@ -310,7 +365,6 @@ export function PriceChart({
     seriesRight,
     currentLabelX,
     priceLabelX,
-    directionIconX,
   } = getPriceChartGeometry(containerWidth)
   const latestPoint = safePoints.at(-1)
   const latestPrice = currentPrice ?? latestPoint?.value ?? 0
@@ -328,7 +382,7 @@ export function PriceChart({
 
     return () => window.clearTimeout(timer)
   }, [directionAnimationSequence])
-  const priceLabelSample = priceFormatter.format(renderDomain.top)
+  const priceLabelSample = priceFormatter.format(domain.top)
   // O nó fica em estado pelo mesmo motivo da etiqueta do objetivo, logo
   // abaixo: enquanto a série está vazia o componente sai pelo retorno
   // antecipado e este `<text>` não existe. Com `useRef` o efeito rodava uma
@@ -363,9 +417,25 @@ export function PriceChart({
     measure()
   }, [priceLabelNode, priceLabelSample.length, chartWidth])
 
+  const targetPlacement = resolvePriceChartTarget(
+    targetPrice,
+    domain,
+    renderDomain,
+    PLOT_TOP,
+    PLOT_BOTTOM,
+    latestPrice,
+  )
+  const isTargetClamped = targetPlacement !== null
+    && targetPlacement.clamp !== 'none'
+  // Fora da escala, a linha sumiria do quadro e sobraria uma pílula flutuando
+  // numa borda. Ali o que importa é quanto falta e para que lado; o valor
+  // absoluto do objetivo continua visível no cartão logo acima do gráfico,
+  // então repeti-lo aqui só alargaria a pílula até por cima do marcador.
   const targetLabel = targetPrice === null || !Number.isFinite(targetPrice)
     ? null
-    : `${priceFormatter.format(targetPrice)} - objetivo`
+    : isTargetClamped && targetPlacement?.distance != null
+      ? `objetivo · ${priceFormatter.format(Math.abs(targetPlacement.distance))}`
+      : `${priceFormatter.format(targetPrice)} - objetivo`
   // O nó fica em estado, e não em `useRef`, para a medição reagir à entrada
   // dele no DOM. Enquanto a série está vazia o componente sai pelo retorno
   // antecipado do estado vazio e o `<text>` não existe; com `useRef` o efeito
@@ -416,14 +486,18 @@ export function PriceChart({
   const rangeConfig = getPriceChartRangeConfig(range, seriesRight)
   const pixelsPerSecond = rangeConfig.pixelsPerSecond
   const timeTickInterval = rangeConfig.timeTickIntervalMs
-  const timeTickSpacing = (timeTickInterval / 1000) * pixelsPerSecond
   const windowSpanMs = rangeConfig.durationMs
     ?? (seriesRight / pixelsPerSecond) * 1000
   const isLiveRange = range === 'live'
+  const isRoundRange = range === 'ronda'
+  const isRollingRange = isRollingPriceChartRange(range)
   const isPanned = isLiveRange && viewAnchorTimestamp !== null
-  const anchorTime = isPanned
-    ? viewAnchorTimestamp ?? displayTime
-    : displayTime
+  // A rodada é a única faixa de quadro parado: ela vai de `roundStart` a
+  // `roundEnd`, então a âncora é o fechamento e o presente cai no meio, com o
+  // que ainda falta da rodada aberto à direita do marcador.
+  const anchorTime = isRoundRange
+    ? roundEnd
+    : isPanned ? viewAnchorTimestamp ?? displayTime : displayTime
   const anchorPrice = isPanned
     ? interpolatePriceAt(safePoints, anchorTime) ?? latestPrice
     : latestPrice
@@ -436,6 +510,39 @@ export function PriceChart({
     onViewAnchorChange,
   })
 
+  // Nas faixas rolantes o presente é sempre a borda direita da série. Na
+  // rodada ele avança pelo quadro até o fechamento, e o marcador vai com ele.
+  const markerX = isRoundRange
+    ? Math.min(seriesRight, Math.max(
+        PLOT_LEFT,
+        seriesRight - ((roundEnd - displayTime) / 1000) * pixelsPerSecond,
+      ))
+    : seriesRight
+  const { cancelScrub, isScrubbing, scrubX, scrubHandlers } = usePriceChartScrub({
+    leftBoundary: PLOT_LEFT,
+    markerX,
+    hasCompetingPan: isLiveRange,
+    onScrubStart: cancelPan,
+  })
+  const chartPointerHandlers = {
+    onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {
+      if (isLiveRange) panHandlers.onPointerDown(event)
+      scrubHandlers.onPointerDown(event)
+    },
+    onPointerMove: (event: ReactPointerEvent<HTMLElement>) => {
+      if (isLiveRange && !isScrubbing) panHandlers.onPointerMove(event)
+      scrubHandlers.onPointerMove(event)
+    },
+    onPointerUp: (event: ReactPointerEvent<HTMLElement>) => {
+      if (isLiveRange) panHandlers.onPointerUp(event)
+      scrubHandlers.onPointerUp(event)
+    },
+    onPointerCancel: (event: ReactPointerEvent<HTMLElement>) => {
+      if (isLiveRange) panHandlers.onPointerCancel(event)
+      scrubHandlers.onPointerCancel(event)
+    },
+  }
+
   useEffect(() => {
     if (isLiveRange) onWindowSpanChange?.(windowSpanMs)
   }, [isLiveRange, onWindowSpanChange, windowSpanMs])
@@ -447,6 +554,7 @@ export function PriceChart({
     }
 
     cancelPan()
+    cancelScrub()
     onViewAnchorChange(null)
     onRangeChange(nextRange)
   }
@@ -484,8 +592,10 @@ export function PriceChart({
   )
 
   const visibleEntries = useMemo(
-    () => (isPanned ? [] : layoutPriceChartEntries(entries, displayTime)),
-    [displayTime, entries, isPanned],
+    () => (isPanned || isScrubbing
+      ? []
+      : layoutPriceChartEntries(entries, displayTime)),
+    [displayTime, entries, isPanned, isScrubbing],
   )
 
   if (safePoints.length === 0) {
@@ -503,19 +613,8 @@ export function PriceChart({
     )
   }
 
-  const { top } = renderDomain
-  const { step } = domain
   const priceToY = (value: number) =>
     projectPriceToY(value, renderDomain, PLOT_TOP, PLOT_BOTTOM)
-  const targetPlacement = resolvePriceChartTarget(
-    targetPrice,
-    domain,
-    renderDomain,
-    PLOT_TOP,
-    PLOT_BOTTOM,
-  )
-  const isTargetClamped = targetPlacement !== null
-    && targetPlacement.clamp !== 'none'
   const targetPillWidth = targetLabelWidth === 0
     ? 0
     : TARGET_PILL_PADDING_LEFT
@@ -525,6 +624,12 @@ export function PriceChart({
           + TARGET_CHEVRON_SIZE
           + TARGET_PILL_PADDING_RIGHT_WITH_CHEVRON
         : TARGET_PILL_PADDING_RIGHT)
+  // A pílula travada recolhe para dentro da faixa em vez de pousar sobre o eixo.
+  const targetLabelOffsetY = targetPlacement === null
+    ? 0
+    : targetPlacement.clamp === 'above'
+      ? TARGET_PILL_HEIGHT / 2 + 1
+      : targetPlacement.clamp === 'below' ? -(TARGET_PILL_HEIGHT / 2 + 1) : 0
   const animatedSafePoints = safePoints.map((point, index) => (
     index === safePoints.length - 1
       ? { ...point, value: latestPrice }
@@ -547,10 +652,14 @@ export function PriceChart({
     ...point,
     y: priceToY(point.value),
   }))
+  // O glifo de direção acompanha o marcador. Ele vinha de `getPriceChartGeometry`
+  // fixado em `seriesRight + 10`, o que só coincide nas faixas rolantes; na
+  // rodada o presente anda pelo quadro e o glifo tem de andar junto.
+  const directionIconX = markerX + 10
   const currentPoint: ChartPoint = {
-    timestamp: anchorTime,
+    timestamp: isRoundRange ? displayTime : anchorTime,
     value: anchorPrice,
-    x: seriesRight,
+    x: markerX,
     y: priceToY(anchorPrice),
   }
   // O recorte existe apenas para abrir espaço para os chevrons. Sem direção
@@ -560,48 +669,95 @@ export function PriceChart({
     isDirectionActive ? '' : ' price-chart__direction-clear--closed'
   }`
   const directionCenterX = directionIconX + 12
+  // Verde acima do objetivo, vermelho abaixo, com a virada exatamente na altura
+  // dele: é a leitura de quem está ganhando que a referência dá pela cor do
+  // outcome. Sem objetivo definido, a série continua neutra.
+  const targetSplitOffset = targetPlacement === null
+    ? null
+    : Math.min(1, Math.max(0, targetPlacement.y / PRICE_CHART_HEIGHT))
+  const isAboveTarget = targetPrice !== null
+    && Number.isFinite(targetPrice)
+    && anchorPrice >= targetPrice
+  const seriesToneClassName = targetSplitOffset === null
+    ? ''
+    : isAboveTarget
+      ? ' price-chart--above-target'
+      : ' price-chart--below-target'
+  const areaTailStart = Math.max(0, currentPoint.x - AREA_TAIL_WIDTH)
+  // A leitura por toque usa a mesma projeção da série, invertida: o x do dedo
+  // volta a ser um instante, e o instante volta a ser um preço interpolado.
+  const scrubReading = scrubX === null
+    ? null
+    : (() => {
+        const timestamp = anchorTime
+          - ((seriesRight - scrubX) / pixelsPerSecond) * 1000
+        const value = interpolatePriceAt(
+          isPanned ? safePoints : pointsWithCurrent,
+          timestamp,
+        )
+
+        return value === null
+          ? null
+          : { timestamp, value, x: scrubX, y: priceToY(value) }
+      })()
+  // A pílula do objetivo mantém a âncora do Figma em `TARGET_LABEL_X`; ela só
+  // recua quando divide a mesma faixa horizontal do marcador, caso em que o
+  // halo do ponto passaria por cima do texto.
+  const targetPillY = targetPlacement === null
+    ? null
+    : targetPlacement.y + targetLabelOffsetY
+  const sharesBandWithMarker = targetPillY !== null
+    && Math.abs(targetPillY - currentPoint.y) < TARGET_PILL_HEIGHT + 6
+  const targetLabelX = sharesBandWithMarker
+    ? Math.max(
+        PLOT_LEFT,
+        Math.min(TARGET_LABEL_X, currentPoint.x - 14 - targetPillWidth),
+      )
+    : TARGET_LABEL_X
   const visibleLinePoints = connectPriceChartEndpoint(chartPoints, currentPoint)
   const linePath = getSmoothPath(visibleLinePoints)
   const areaStartX = visibleLinePoints[0]?.x ?? PLOT_LEFT
   const areaPath = `${linePath} L ${currentPoint.x} ${PLOT_BOTTOM} L ${areaStartX} ${PLOT_BOTTOM} Z`
-  const ticks = Array.from(
-    { length: GRID_LINE_COUNT },
-    (_, index) => top - step * index,
-  )
-  const latestTimeTick =
-    Math.floor(anchorTime / timeTickInterval) * timeTickInterval
-  const liveTimeTickCount = Math.max(
-    4,
-    Math.ceil((seriesRight - PLOT_LEFT) / timeTickSpacing) + 1,
-  )
-  const timeTicks = isLiveRange
-    ? Array.from({ length: liveTimeTickCount }, (_, index) => {
-        const timestamp = latestTimeTick - index * timeTickInterval
+  // Os valores vêm do domínio estabilizado, então continuam redondos; a altura
+  // vem da mesma projeção que desenha a série. Antes o valor era montado com o
+  // passo estabilizado sobre o topo interpolado e depositado numa das sete
+  // frações fixas do plot, o que fazia o rótulo descrever uma altura que não
+  // era a sua sempre que os dois domínios divergiam.
+  const gridTicks = Array.from({ length: GRID_LINE_COUNT }, (_, index) => {
+    const value = domain.top - domain.step * index
+    const y = priceToY(value)
+    const overflow = y < PLOT_TOP
+      ? PLOT_TOP - y
+      : y > PLOT_BOTTOM ? y - PLOT_BOTTOM : 0
 
-        return {
-          timestamp,
-          x:
-            seriesRight -
-            ((anchorTime - timestamp) / 1000) * pixelsPerSecond,
-        }
-      })
-    : getPriceChartTimeTicks(
-        anchorTime,
-        timeTickInterval,
-        PLOT_LEFT,
-        seriesRight,
-        TIME_TICK_LABEL_INSET,
-      )
+    return {
+      value,
+      y,
+      opacity: Math.max(0, 1 - overflow / GRID_FADE_DISTANCE),
+    }
+  })
+  // Um único caminho para todas as faixas: cada horário cai no `x` que a
+  // projeção da série prevê para ele. As faixas rolantes desvanecem nas bordas
+  // porque as marcações nascem à direita e caminham; a rodada tem quadro parado,
+  // então só descarta o que ficaria fora do plot.
+  const timeTicks = getPriceChartTimeTicks(
+    anchorTime,
+    timeTickInterval,
+    PLOT_LEFT,
+    seriesRight,
+    pixelsPerSecond,
+  ).filter(({ x }) => isRollingRange || x >= PLOT_LEFT)
 
   return (
     <figure
       ref={containerRef}
-      className={`price-chart ${isPanned ? 'price-chart--panned' : ''} ${isPanning ? 'price-chart--panning' : ''} ${className}`}
+      className={`price-chart${seriesToneClassName} ${isPanned ? 'price-chart--panned' : ''} ${isPanning ? 'price-chart--panning' : ''} ${isScrubbing ? 'price-chart--scrubbing' : ''} ${className}`}
       aria-label={isPanned
         ? `Gráfico del historial de Bitcoin: ${priceFormatter.format(anchorPrice)}`
         : `Gráfico del precio actual: ${priceFormatter.format(latestPrice)}`}
       data-testid="price-chart"
       data-range={range}
+      data-marker-x={markerX}
       data-panned={isPanned}
       data-view-anchor={viewAnchorTimestamp ?? ''}
       data-window-span={Math.round(windowSpanMs)}
@@ -613,16 +769,16 @@ export function PriceChart({
             )}px`,
           } as CSSProperties
         : undefined}
-      {...(isLiveRange ? panHandlers : {})}
+      {...chartPointerHandlers}
       data-point-count={safePoints.length}
       data-displayed-price={latestPrice}
       data-target-price={targetPrice ?? ''}
       data-target-clamp={targetPlacement?.clamp ?? ''}
+      data-target-distance={targetPlacement?.distance ?? ''}
       data-target-y={targetPlacement?.y ?? ''}
       data-domain-bottom={domain.bottom}
       data-domain-top={domain.top}
       data-domain-step={domain.step}
-      data-domain-trend-shift={domain.trendShiftIntervals ?? 0}
       data-render-domain-bottom={renderDomain.bottom}
       data-render-domain-top={renderDomain.top}
       data-render-domain-step={renderDomain.step}
@@ -651,9 +807,62 @@ export function PriceChart({
 
         <defs>
           <linearGradient id={`price-area-${id}`} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#fbfbfb" stopOpacity="0.14" />
-            <stop offset="100%" stopColor="#fbfbfb" stopOpacity="0" />
+            <stop className="price-chart__area-stop" offset="0%" stopOpacity="0.16" />
+            <stop className="price-chart__area-stop" offset="100%" stopOpacity="0" />
           </linearGradient>
+          {targetSplitOffset === null ? null : (
+            <linearGradient
+              id={`price-line-${id}`}
+              gradientUnits="userSpaceOnUse"
+              x1="0"
+              x2="0"
+              y1="0"
+              y2={PRICE_CHART_HEIGHT}
+            >
+              <stop
+                className="price-chart__line-stop--above"
+                offset={targetSplitOffset}
+              />
+              <stop
+                className="price-chart__line-stop--below"
+                offset={targetSplitOffset}
+              />
+            </linearGradient>
+          )}
+          <linearGradient
+            id={`area-tail-${id}`}
+            gradientUnits="userSpaceOnUse"
+            x1={areaTailStart}
+            x2={currentPoint.x}
+            y1="0"
+            y2="0"
+          >
+            <stop offset="0%" stopColor="#fff" />
+            <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+          </linearGradient>
+          <mask
+            id={`area-tail-mask-${id}`}
+            maskUnits="userSpaceOnUse"
+            x="0"
+            y={PLOT_CLIP_TOP}
+            width={plotRight}
+            height={PLOT_CLIP_HEIGHT}
+          >
+            <rect
+              x="0"
+              y={PLOT_CLIP_TOP}
+              width={areaTailStart}
+              height={PLOT_CLIP_HEIGHT}
+              fill="#fff"
+            />
+            <rect
+              x={areaTailStart}
+              y={PLOT_CLIP_TOP}
+              width={currentPoint.x - areaTailStart}
+              height={PLOT_CLIP_HEIGHT}
+              fill={`url(#area-tail-${id})`}
+            />
+          </mask>
           <linearGradient
             id={`current-price-${id}`}
             x1="0"
@@ -778,41 +987,59 @@ export function PriceChart({
           mask={`url(#chart-clear-mask-${id})`}
           aria-hidden="true"
         >
-          {ticks.map((tick, index) => {
-            const y =
-              PLOT_TOP +
-              (index * (PLOT_BOTTOM - PLOT_TOP)) / (GRID_LINE_COUNT - 1)
-
-            return (
-              <g
-                key={`grid-tick-${index}`}
-                className="price-chart__grid-tick"
-                style={{ transform: `translateY(${y}px)` }}
+          {gridTicks.map(({ opacity, value, y }, index) => (
+            <g
+              key={`grid-tick-${index}`}
+              className="price-chart__grid-tick"
+              data-grid-value={value}
+              style={{ opacity, transform: `translateY(${y}px)` }}
+            >
+              <line x1={PLOT_LEFT} x2={plotRight} y1="0" y2="0" />
+              <text
+                ref={index === 0 ? setPriceLabelNode : undefined}
+                x={priceLabelX}
+                y="4"
               >
-                <line x1={PLOT_LEFT} x2={plotRight} y1="0" y2="0" />
-                <text
-                  ref={index === 0 ? setPriceLabelNode : undefined}
-                  x={priceLabelX}
-                  y="4"
-                >
-                  {priceFormatter.format(tick)}
-                </text>
-              </g>
-            )
-          })}
+                {priceFormatter.format(value)}
+              </text>
+            </g>
+          ))}
         </g>
+
+        {isRoundRange ? (
+          <g className="price-chart__round-close" aria-hidden="true">
+            <line
+              x1={seriesRight}
+              x2={seriesRight}
+              y1={PLOT_TOP}
+              y2={PLOT_BOTTOM}
+            />
+            <text x={seriesRight} y={PLOT_TOP - 6} textAnchor="middle">
+              cierre
+            </text>
+          </g>
+        ) : null}
 
         <g
           clipPath={`url(#plot-clip-${id})`}
           mask={`url(#plot-fade-mask-${id})`}
           aria-hidden="true"
         >
+          {/* O preenchimento termina em fade: cortado a prumo sob o marcador,
+              ele deixava uma costura vertical no meio do gráfico. */}
           <path
             className="price-chart__area"
             d={areaPath}
             fill={`url(#price-area-${id})`}
+            mask={`url(#area-tail-mask-${id})`}
           />
-          <path className="price-chart__line" d={linePath} pathLength="1" />
+          <path
+            className="price-chart__line"
+            d={linePath}
+            stroke={targetSplitOffset === null
+              ? undefined
+              : `url(#price-line-${id})`}
+          />
         </g>
 
         {/* O eixo temporal vem antes da linha do objetivo porque a pílula
@@ -826,7 +1053,7 @@ export function PriceChart({
               className="price-chart__time-tick"
               data-time-tick={timestamp}
               data-time-tick-position={index}
-              style={isLiveRange
+              style={isRollingRange
                 ? {
                     opacity: getTimeTickOpacity(
                       x,
@@ -881,18 +1108,23 @@ export function PriceChart({
                 borda da faixa, ela riscaria o rótulo mais externo. Aqui ela
                 para em `plotRight`, como a grade e a linha do preço atual, que
                 já respeitam a coluna dos rótulos. */}
-            <line
-              className="price-chart__target-line"
-              x1={PLOT_LEFT}
-              x2={plotRight}
-              y1="0"
-              y2="0"
-            />
+            {/* Travado, o objetivo não está nesta altura: está além dela. Uma
+                linha atravessando o quadro aqui afirmaria o contrário, então
+                sobra apenas o indicador ancorado na borda. */}
+            {isTargetClamped ? null : (
+              <line
+                className="price-chart__target-line"
+                x1={PLOT_LEFT}
+                x2={plotRight}
+                y1="0"
+                y2="0"
+              />
+            )}
             {/* A pílula é opaca, então oclui a linha e a série atrás dela: não
                 há vão a abrir na linha nem máscara a manter. */}
             <g
               className="price-chart__target-label"
-              transform={`translate(${TARGET_LABEL_X} 0)`}
+              transform={`translate(${targetLabelX} ${targetLabelOffsetY})`}
               opacity={targetPillWidth > 0 ? 1 : 0}
             >
               <rect
@@ -1001,6 +1233,30 @@ export function PriceChart({
           </g>
         </g>
 
+        {scrubReading !== null ? (
+          <g className="price-chart__scrub" aria-hidden="true">
+            <line
+              className="price-chart__scrub-line"
+              x1={scrubReading.x}
+              x2={scrubReading.x}
+              y1={PLOT_TOP}
+              y2={PLOT_BOTTOM}
+            />
+            <circle
+              className="price-chart__scrub-halo"
+              cx={scrubReading.x}
+              cy={scrubReading.y}
+              r="7"
+            />
+            <circle
+              className="price-chart__scrub-point"
+              cx={scrubReading.x}
+              cy={scrubReading.y}
+              r="3.5"
+            />
+          </g>
+        ) : null}
+
         <g className="price-chart__entry-feed" aria-hidden="true">
           {visibleEntries.map(({ entry, opacity, progress, x, y }) => (
             <g
@@ -1024,6 +1280,23 @@ export function PriceChart({
 
       </svg>
 
+      {scrubReading !== null ? (
+        <div
+          className="price-chart__scrub-tooltip"
+          data-scrub-price={scrubReading.value}
+          data-scrub-timestamp={scrubReading.timestamp}
+          style={{
+            left: `${Math.min(
+              chartWidth - 62,
+              Math.max(62, scrubReading.x),
+            )}px`,
+            top: `${Math.max(24, scrubReading.y - 14)}px`,
+          }}
+        >
+          <strong>{priceFormatter.format(scrubReading.value)}</strong>
+          <span>{timeFormatter.format(scrubReading.timestamp)}</span>
+        </div>
+      ) : null}
       {!isPanned ? (
         <output className="price-chart__live-value" aria-live="polite">
           {priceFormatter.format(latestPrice)}
