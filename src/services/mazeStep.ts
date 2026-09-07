@@ -182,6 +182,14 @@ export const markMazeStep = (step: MazeStep) => {
     }
   } catch { /* Armazenamento bloqueado: o botão manual continua disponível. */ }
 
+  // Experimento restrito ao onboarding. Mantém a mesma espera e o botão real
+  // do Maze; a única diferença é não recarregar antes de encerrar a tarefa.
+  if (step === 'onboarding-complete'
+    && new URL(window.location.href).searchParams.get('mazeNoReload') === 'onboarding') {
+    window.setTimeout(resumeMazeAutoEnd, MAZE_COMPLETION_RELOAD_DELAY_MS)
+    return
+  }
+
   window.setTimeout(
     () => window.location.reload(),
     MAZE_COMPLETION_RELOAD_DELAY_MS,
