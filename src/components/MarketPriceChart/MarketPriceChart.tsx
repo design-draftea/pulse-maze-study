@@ -30,6 +30,7 @@ interface MarketPriceChartProps {
   directionAnimationSequence: number
   entries: PriceChartEntry[]
   roundStart: number
+  roundEnd: number
   currentSource: string | null
   currentStatus: string
   currentUpdatedAt: number | null
@@ -44,21 +45,34 @@ const domainsAreEqual = (
   && first.top === second.top
   && first.step === second.step
 
+// As dependências são os três números do domínio, e não o objeto. As fontes do
+// domínio são recriadas a cada tique de 250ms do relógio, então depender da
+// identidade cancelava e reiniciava esta animação de 280ms antes de ela
+// convergir: `renderDomain` nunca alcançava `domain` e os rótulos da grade
+// deixavam de descrever as alturas em que estavam desenhados.
 const useAnimatedPriceChartDomain = (
-  targetDomain: PriceChartDomain,
+  { bottom, top, step }: PriceChartDomain,
 ) => {
-  const currentDomainRef = useRef(targetDomain)
-  const [renderDomain, setRenderDomain] = useState(targetDomain)
+  const currentDomainRef = useRef<PriceChartDomain>({ bottom, top, step })
+  const [renderDomain, setRenderDomain] = useState<PriceChartDomain>(
+    { bottom, top, step },
+  )
 
   useEffect(() => {
+    const targetDomain = { bottom, top, step }
     const fromDomain = currentDomainRef.current
+
     if (domainsAreEqual(fromDomain, targetDomain)) return undefined
 
+    const commit = (nextDomain: PriceChartDomain) => {
+      currentDomainRef.current = nextDomain
+      setRenderDomain(nextDomain)
+    }
+
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const reducedMotionFrame = window.requestAnimationFrame(() => {
-        currentDomainRef.current = targetDomain
-        setRenderDomain(targetDomain)
-      })
+      const reducedMotionFrame = window.requestAnimationFrame(
+        () => commit(targetDomain),
+      )
       return () => window.cancelAnimationFrame(reducedMotionFrame)
     }
 
@@ -70,20 +84,30 @@ const useAnimatedPriceChartDomain = (
         (frameTime - startedAt) / DOMAIN_ANIMATION_DURATION_MS,
       )
       const easedProgress = 1 - (1 - progress) ** 3
-      const nextDomain = interpolatePriceChartDomain(
-        fromDomain,
-        targetDomain,
-        easedProgress,
-      )
 
-      currentDomainRef.current = nextDomain
-      setRenderDomain(nextDomain)
+      commit(interpolatePriceChartDomain(fromDomain, targetDomain, easedProgress))
       if (progress < 1) frameId = window.requestAnimationFrame(animate)
     }
 
+    // Com a página oculta o navegador não entrega quadros, então a transição
+    // fica parada onde estava e a faixa desenhada deixa de ser a faixa
+    // calculada. Na volta o certo é saltar para o valor verdadeiro, não
+    // retomar uma interpolação que descreve um estado que já passou.
+    const snapToTarget = () => {
+      if (document.visibilityState !== 'visible') return
+
+      window.cancelAnimationFrame(frameId)
+      commit(targetDomain)
+    }
+
     frameId = window.requestAnimationFrame(animate)
-    return () => window.cancelAnimationFrame(frameId)
-  }, [targetDomain])
+    document.addEventListener('visibilitychange', snapToTarget)
+
+    return () => {
+      document.removeEventListener('visibilitychange', snapToTarget)
+      window.cancelAnimationFrame(frameId)
+    }
+  }, [bottom, step, top])
 
   return renderDomain
 }
@@ -98,6 +122,7 @@ export function MarketPriceChart({
   directionAnimationSequence,
   entries,
   roundStart,
+  roundEnd,
   currentSource,
   currentStatus,
   currentUpdatedAt,
@@ -124,9 +149,10 @@ export function MarketPriceChart({
   const candidateDomain = useMemo(
     () => calculatePriceChartDomain(liveWindowPoints, targetPrice, {
       includeAllPoints: true,
+      livePrice: currentPrice,
       minimumGridStep: LIVE_MINIMUM_GRID_STEP,
     }),
-    [liveWindowPoints, targetPrice],
+    [currentPrice, liveWindowPoints, targetPrice],
   )
   const pannedDomain = useMemo(() => {
     if (range !== 'live' || viewAnchorTimestamp === null) return null
@@ -140,7 +166,6 @@ export function MarketPriceChart({
     return windowPoints.length === 0
       ? null
       : calculatePriceChartDomain(windowPoints, null, {
-          applyTrendShift: false,
           includeAllPoints: true,
           minimumGridStep: LIVE_MINIMUM_GRID_STEP,
         })
@@ -149,59 +174,62 @@ export function MarketPriceChart({
     const durationMs = getPriceChartRangeConfig(range, 1).durationMs
     if (durationMs === null) return null
 
-    const rangeEnd = Math.max(
-      now,
-      historyPoints.at(-1)?.timestamp ?? 0,
-    )
+    // O quadro da rodada é parado: vai de `roundStart` a `roundEnd` e sempre
+    // inclui o objetivo, que nessa escala cabe e é o referencial do jogo.
+    const isRoundRange = range === 'ronda'
+    const rangeEnd = isRoundRange
+      ? roundEnd
+      : Math.max(now, historyPoints.at(-1)?.timestamp ?? 0)
     const windowPoints = getPriceChartWindowPoints(
       historyPoints,
       rangeEnd - durationMs,
-      rangeEnd,
+      isRoundRange ? Math.min(now, rangeEnd) : rangeEnd,
     )
 
     return calculatePriceChartDomain(windowPoints, targetPrice, {
-      applyTrendShift: false,
       includeAllPoints: true,
+      includeTarget: isRoundRange,
+      livePrice: currentPrice,
     })
-  }, [historyPoints, now, range, targetPrice])
-  const [stableDomainState, setStableDomainState] = useState<{
-    inputKey: string
-    state: StablePriceChartDomainState
-  }>(() => ({
-    inputKey: '',
-    state: stabilizePriceChartDomain(
-      null,
-      candidateDomain,
-      liveWindowPoints,
-      chartTime,
-      { includeAllPoints: true },
-    ),
-  }))
+  }, [currentPrice, historyPoints, now, range, roundEnd, targetPrice])
+  const [stableDomainState, setStableDomainState] = useState<
+    StablePriceChartDomainState
+  >(() => stabilizePriceChartDomain(
+    null,
+    candidateDomain,
+    liveWindowPoints,
+    chartTime,
+    { includeAllPoints: true, livePrice: currentPrice },
+  ))
   const [initialRoundStart] = useState(roundStart)
-  const domainTimestamp = chartTime
-  const domainInputKey = [
-    candidateDomain.bottom,
-    candidateDomain.top,
-    candidateDomain.step,
-    domainTimestamp,
-  ].join(':')
-  let resolvedDomainState = stableDomainState
+  const nextDomainState = stabilizePriceChartDomain(
+    stableDomainState,
+    candidateDomain,
+    liveWindowPoints,
+    chartTime,
+    { includeAllPoints: true, livePrice: currentPrice },
+  )
+  // A comparação é por valor. `candidateDomain` é um objeto novo sempre que o
+  // preço animado muda, então comparar identidades faria a estabilização
+  // recolocar o mesmo domínio em estado a cada quadro.
+  const hasSameDomain = domainsAreEqual(
+    nextDomainState.domain,
+    stableDomainState.domain,
+  )
+  const resolvedDomainState = hasSameDomain
+    ? { ...nextDomainState, domain: stableDomainState.domain }
+    : nextDomainState
 
-  if (stableDomainState.inputKey !== domainInputKey) {
-    resolvedDomainState = {
-      inputKey: domainInputKey,
-      state: stabilizePriceChartDomain(
-        stableDomainState.state,
-        candidateDomain,
-        liveWindowPoints,
-        domainTimestamp,
-        { includeAllPoints: true },
-      ),
-    }
+  if (
+    !hasSameDomain
+    || resolvedDomainState.contractionCandidateKey
+      !== stableDomainState.contractionCandidateKey
+    || resolvedDomainState.shiftCandidateKey !== stableDomainState.shiftCandidateKey
+  ) {
     setStableDomainState(resolvedDomainState)
   }
 
-  const liveDomain = resolvedDomainState.state.domain
+  const liveDomain = resolvedDomainState.domain
   const domain = fixedRangeDomain ?? pannedDomain ?? liveDomain
   const renderDomain = useAnimatedPriceChartDomain(domain)
 
@@ -222,6 +250,7 @@ export function MarketPriceChart({
       onViewAnchorChange={setViewAnchorTimestamp}
       onWindowSpanChange={setWindowSpanMs}
       resetReason="initial-load"
+      roundEnd={roundEnd}
       source={currentSource}
       status={currentStatus}
       updatedAt={currentUpdatedAt}

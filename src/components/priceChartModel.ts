@@ -3,7 +3,7 @@ export type PricePoint = {
   value: number
 }
 
-export type PriceChartRange = 'live' | '5m' | '15m' | '1h'
+export type PriceChartRange = 'live' | 'ronda' | '5m' | '15m' | '1h'
 
 export type PriceChartRangeConfig = {
   durationMs: number | null
@@ -20,7 +20,6 @@ export type PriceChartDomain = {
   bottom: number
   top: number
   step: number
-  trendShiftIntervals?: -2 | 0 | 2
 }
 
 export type ProjectedPricePoint = PricePoint & {
@@ -56,24 +55,45 @@ export type PriceChartTargetClamp = 'none' | 'above' | 'below'
 export type PriceChartTargetPlacement = {
   y: number
   clamp: PriceChartTargetClamp
+  // Quanto o preço ainda precisa andar para alcançar o objetivo. É o dado que
+  // falta quando o objetivo não cabe na escala e a linha some do quadro.
+  distance: number | null
 }
 
 const GRID_INTERVALS = 6
 const MINIMUM_GRID_STEP = 2.5
 export const LIVE_MINIMUM_GRID_STEP = 0.25
 const RECENT_DOMAIN_POINT_COUNT = 20
-const TREND_LOOKBACK_POINT_COUNT = 6
-const TREND_TRIGGER_INTERVALS = 2
-const TREND_SHIFT_INTERVALS = 2
-const TREND_MINIMUM_STEP_FRACTION = 0.1
+// A faixa nunca encosta nos extremos. Sem esta folga o traço de 3px da linha e o
+// halo de 10px do ponto são cortados pelo recorte sempre que o preço toca um
+// limite, que é o estado normal de um domínio ajustado ao mínimo e ao máximo.
+const DOMAIN_PADDING_FRACTION = 0.12
+// Gatilhos da histerese. A faixa só se move quando o dado ameaça sair do quadro
+// ou quando o centro dele derivou o bastante para o enquadramento deixar de
+// servir. Reescalar a cada oscilação é o que fazia o eixo nunca ficar parado.
+const DOMAIN_EDGE_MARGIN_FRACTION = 0.04
+const DOMAIN_RECENTER_FRACTION = 0.25
 export const LIVE_WINDOW_DURATION_MS = 30_000
 const LIVE_TIME_TICK_INTERVAL_MS = 10_000
-const TIME_TICK_COUNT = 3
+// A rodada dura o mesmo que a janela de 15M, mas a faixa é outra coisa: ela é
+// ancorada em `roundEnd` e não anda com o relógio, então mostra o quadro
+// inteiro da rodada, o que já passou e o que falta até o fechamento.
+export const ROUND_WINDOW_DURATION_MS = 15 * 60_000
 const RANGE_CONFIG = {
+  ronda: {
+    durationMs: ROUND_WINDOW_DURATION_MS,
+    timeTickIntervalMs: 5 * 60_000,
+  },
   '5m': { durationMs: 5 * 60_000, timeTickIntervalMs: 2 * 60_000 },
   '15m': { durationMs: 15 * 60_000, timeTickIntervalMs: 5 * 60_000 },
   '1h': { durationMs: 60 * 60_000, timeTickIntervalMs: 20 * 60_000 },
 } as const
+
+// Só a rodada tem janela parada. Em todas as outras faixas as marcações nascem
+// na direita e caminham para a esquerda, e é isso que o fade acompanha.
+export const isRollingPriceChartRange = (range: PriceChartRange) => (
+  range !== 'ronda'
+)
 export const DOMAIN_CONTRACTION_DELAY_MS = 5_000
 export const DOMAIN_SHIFT_CONFIRMATION_MS = 750
 
@@ -98,35 +118,44 @@ export const getPriceChartRangeConfig = (
   }
 }
 
+// As marcações caem no `x` que a própria projeção da série prevê para o seu
+// horário. Antes elas eram distribuídas em três frações uniformes do plot,
+// independentemente do tempo: a 375px, no range de 1H, a marcação das 20:40 era
+// desenhada em `x=212` quando sua posição verdadeira era `x=185,1` — cerca de
+// sete minutos de deslocamento em cada rótulo.
 export const getPriceChartTimeTicks = (
   anchorTime: number,
   intervalMs: number,
   leftBoundary: number,
   rightBoundary: number,
-  labelInset: number,
+  pixelsPerSecond: number,
 ): PriceChartTimeTick[] => {
   if (
     !Number.isFinite(anchorTime)
     || !Number.isFinite(intervalMs)
     || intervalMs <= 0
+    || !Number.isFinite(pixelsPerSecond)
+    || pixelsPerSecond <= 0
     || !Number.isFinite(leftBoundary)
     || !Number.isFinite(rightBoundary)
     || rightBoundary < leftBoundary
   ) return []
 
-  const availableWidth = rightBoundary - leftBoundary
-  const safeInset = Math.min(
-    availableWidth / 2,
-    Math.max(0, Number.isFinite(labelInset) ? labelInset : 0),
+  const spacing = (intervalMs / 1000) * pixelsPerSecond
+  const count = Math.max(
+    2,
+    Math.ceil((rightBoundary - leftBoundary) / spacing) + 2,
   )
-  const firstX = leftBoundary + safeInset
-  const lastX = rightBoundary - safeInset
   const latestTimestamp = Math.floor(anchorTime / intervalMs) * intervalMs
 
-  return Array.from({ length: TIME_TICK_COUNT }, (_, index) => ({
-    timestamp: latestTimestamp - (TIME_TICK_COUNT - 1 - index) * intervalMs,
-    x: firstX + ((lastX - firstX) * index) / (TIME_TICK_COUNT - 1),
-  }))
+  return Array.from({ length: count }, (_, index) => {
+    const timestamp = latestTimestamp - index * intervalMs
+
+    return {
+      timestamp,
+      x: rightBoundary - ((anchorTime - timestamp) / 1000) * pixelsPerSecond,
+    }
+  }).filter(({ x }) => x >= leftBoundary - spacing && x <= rightBoundary)
 }
 
 export const projectPriceToY = (
@@ -150,19 +179,25 @@ export const resolvePriceChartTarget = (
   renderDomain: Pick<PriceChartDomain, 'bottom' | 'top'>,
   plotTop: number,
   plotBottom: number,
+  currentPrice: number | null = null,
 ): PriceChartTargetPlacement | null => {
   if (targetPrice === null || !Number.isFinite(targetPrice)) return null
   if (!Number.isFinite(domain.top - domain.bottom)) return null
   if (domain.top <= domain.bottom) return null
 
-  if (targetPrice > domain.top) return { y: plotTop, clamp: 'above' }
-  if (targetPrice < domain.bottom) return { y: plotBottom, clamp: 'below' }
+  const distance = currentPrice === null || !Number.isFinite(currentPrice)
+    ? null
+    : targetPrice - currentPrice
+
+  if (targetPrice > domain.top) return { y: plotTop, clamp: 'above', distance }
+  if (targetPrice < domain.bottom) return { y: plotBottom, clamp: 'below', distance }
 
   const y = projectPriceToY(targetPrice, renderDomain, plotTop, plotBottom)
 
   return {
     y: Math.min(plotBottom, Math.max(plotTop, y)),
     clamp: 'none',
+    distance,
   }
 }
 
@@ -182,12 +217,23 @@ const getDomainValues = (
   points: PricePoint[],
   targetPrice: number | null,
   includeAllPoints: boolean,
+  livePrice: number | null,
+  includeTarget: boolean,
 ) => {
   const values = (includeAllPoints ? points : points.slice(-RECENT_DOMAIN_POINT_COUNT))
     .map(({ value }) => value)
     .filter((value) => Number.isFinite(value))
 
-  if (values.length === 0 && targetPrice !== null) values.push(targetPrice)
+  // O marcador, a etiqueta e a última ponta da linha desenham `livePrice`, que
+  // vem do feed animado e não da série. Sem ele aqui a faixa é calculada para
+  // um dado diferente do que aparece na tela, e o marcador escapa do plot.
+  if (livePrice !== null && Number.isFinite(livePrice)) values.push(livePrice)
+  if (
+    targetPrice !== null
+    && Number.isFinite(targetPrice)
+    && (includeTarget || values.length === 0)
+  ) values.push(targetPrice)
+
   return values
 }
 
@@ -294,78 +340,79 @@ export const calculatePriceChartDomain = (
   points: PricePoint[],
   targetPrice: number | null,
   {
-    applyTrendShift = true,
     includeAllPoints = false,
+    includeTarget = false,
+    livePrice = null,
     minimumGridStep = MINIMUM_GRID_STEP,
   }: {
-    applyTrendShift?: boolean
     includeAllPoints?: boolean
+    includeTarget?: boolean
+    livePrice?: number | null
     minimumGridStep?: number
   } = {},
 ): PriceChartDomain => {
-  const values = getDomainValues(points, targetPrice, includeAllPoints)
+  const values = getDomainValues(
+    points,
+    targetPrice,
+    includeAllPoints,
+    livePrice,
+    includeTarget,
+  )
 
-  if (values.length === 0) {
-    return {
-      bottom: 0,
-      top: 6,
-      step: 1,
-      trendShiftIntervals: 0,
-    }
-  }
+  if (values.length === 0) return { bottom: 0, top: 6, step: 1 }
 
   const minimum = Math.min(...values)
   const maximum = Math.max(...values)
+  // A folga entra antes da escolha do passo, então ela participa do
+  // arredondamento e os sete rótulos continuam caindo em números redondos.
+  const padding = Math.max(
+    (maximum - minimum) * DOMAIN_PADDING_FRACTION,
+    minimumGridStep / 2,
+  )
+  const paddedMinimum = minimum - padding
+  const paddedMaximum = maximum + padding
+  // O divisor é `GRID_INTERVALS - 1`, e não `GRID_INTERVALS`. Encaixar a faixa
+  // em múltiplos do passo pode consumir até um intervalo inteiro, e com o vão
+  // dividido por seis as duas correções abaixo chegavam a brigar: ajustar o topo
+  // empurrava a base acima do menor valor, e o preço desenhado ficava de fora.
+  // Reservando um intervalo, qualquer das duas correções ainda contém o dado.
   const step = getNiceStep(Math.max(
     minimumGridStep,
-    (maximum - minimum) / GRID_INTERVALS,
+    (paddedMaximum - paddedMinimum) / (GRID_INTERVALS - 1),
   ))
   const domainSpan = step * GRID_INTERVALS
-  let bottom = Math.floor(((minimum + maximum - domainSpan) / 2) / step) * step
+  let bottom = Math.floor(
+    ((paddedMinimum + paddedMaximum - domainSpan) / 2) / step,
+  ) * step
   let top = bottom + domainSpan
 
-  if (minimum < bottom) {
-    bottom = Math.floor(minimum / step) * step
+  if (paddedMinimum < bottom) {
+    bottom = Math.floor(paddedMinimum / step) * step
     top = bottom + domainSpan
   }
-  if (maximum > top) {
-    top = Math.ceil(maximum / step) * step
+  if (paddedMaximum > top) {
+    top = Math.ceil(paddedMaximum / step) * step
     bottom = top - domainSpan
   }
 
-  const latestValue = values.at(-1) ?? maximum
-  const trendValues = values.slice(-TREND_LOOKBACK_POINT_COUNT)
-  const trendDelta = trendValues.length > 1
-    ? latestValue - trendValues[0]
-    : 0
-  const trendThreshold = step * TREND_MINIMUM_STEP_FRACTION
-  const domainShift = step * TREND_SHIFT_INTERVALS
-  let trendShiftIntervals: -2 | 0 | 2 = 0
-
-  if (!applyTrendShift) return { bottom, top, step, trendShiftIntervals }
-
-  if (
-    trendDelta >= trendThreshold
-    && latestValue >= top - step * TREND_TRIGGER_INTERVALS
-  ) {
-    bottom += domainShift
-    top += domainShift
-    trendShiftIntervals = 2
-  } else if (
-    trendDelta <= -trendThreshold
-    && latestValue <= bottom + step * TREND_TRIGGER_INTERVALS
-  ) {
-    bottom -= domainShift
-    top -= domainShift
-    trendShiftIntervals = -2
-  }
-
-  return { bottom, top, step, trendShiftIntervals }
+  return { bottom, top, step }
 }
 
 const getDomainKey = ({ bottom, top, step }: PriceChartDomain) => (
   `${bottom}:${top}:${step}`
 )
+
+// Reenquadra sem trocar de escala: mesma amplitude, mesmo passo, apenas
+// recentrado no dado. Trocar de escala é decisão à parte, e mais lenta.
+const recenterPriceChartDomain = (
+  domain: PriceChartDomain,
+  center: number,
+): PriceChartDomain => {
+  const span = domain.top - domain.bottom
+  const bottom = Math.round((center - span / 2) / domain.step) * domain.step
+
+  return { bottom, top: bottom + span, step: domain.step }
+}
 
 export const stabilizePriceChartDomain = (
   previous: StablePriceChartDomainState | null,
@@ -374,38 +421,41 @@ export const stabilizePriceChartDomain = (
   now: number,
   {
     includeAllPoints = false,
+    livePrice = null,
   }: {
     includeAllPoints?: boolean
+    livePrice?: number | null
   } = {},
 ): StablePriceChartDomainState => {
-  if (previous === null) {
-    return {
-      domain: candidate,
-      contractionCandidateKey: null,
-      contractionStartedAt: null,
-      shiftCandidateKey: null,
-      shiftStartedAt: null,
-    }
-  }
+  const settled = (domain: PriceChartDomain): StablePriceChartDomainState => ({
+    domain,
+    contractionCandidateKey: null,
+    contractionStartedAt: null,
+    shiftCandidateKey: null,
+    shiftStartedAt: null,
+  })
+
+  if (previous === null) return settled(candidate)
 
   const current = previous.domain
-  const values = (includeAllPoints
-    ? points
-    : points.slice(-RECENT_DOMAIN_POINT_COUNT)
-  ).map(({ value }) => value)
+  const values = getDomainValues(points, null, includeAllPoints, livePrice, false)
   const minimum = values.length > 0 ? Math.min(...values) : candidate.bottom
   const maximum = values.length > 0 ? Math.max(...values) : candidate.top
-  const latest = values.at(-1) ?? (candidate.bottom + candidate.top) / 2
-  const exceedsCurrentDomain = minimum < current.bottom || maximum > current.top
+  const span = current.top - current.bottom
+  const margin = span * DOMAIN_EDGE_MARGIN_FRACTION
+  // Ameaça de saída do quadro: o dado passou de um limite ou encostou nele.
+  // Este é o único gatilho imediato, e ele considera o preço ao vivo.
+  const touchesEdge = minimum < current.bottom + margin
+    || maximum > current.top - margin
 
-  if (candidate.step > current.step || exceedsCurrentDomain) {
-    return {
-      domain: candidate,
-      contractionCandidateKey: null,
-      contractionStartedAt: null,
-      shiftCandidateKey: null,
-      shiftStartedAt: null,
-    }
+  // O único gatilho imediato é o dado ameaçar sair do quadro. Um candidato com
+  // passo maior enquanto tudo ainda cabe não é motivo para reescalar: era assim
+  // que o ruído do feed fazia o eixo trocar de escala a cada poucos segundos,
+  // subindo na hora e descendo cinco segundos depois, indefinidamente.
+  if (touchesEdge) {
+    return settled(candidate.step < current.step
+      ? recenterPriceChartDomain(current, (minimum + maximum) / 2)
+      : candidate)
   }
 
   if (candidate.step < current.step) {
@@ -415,13 +465,7 @@ export const stabilizePriceChartDomain = (
       : now
 
     if (now - contractionStartedAt >= DOMAIN_CONTRACTION_DELAY_MS) {
-      return {
-        domain: candidate,
-        contractionCandidateKey: null,
-        contractionStartedAt: null,
-        shiftCandidateKey: null,
-        shiftStartedAt: null,
-      }
+      return settled(candidate)
     }
 
     return {
@@ -433,12 +477,14 @@ export const stabilizePriceChartDomain = (
     }
   }
 
-  const movesUp = candidate.bottom > current.bottom
-    && latest >= current.top - current.step * TREND_TRIGGER_INTERVALS
-  const movesDown = candidate.bottom < current.bottom
-    && latest <= current.bottom + current.step * TREND_TRIGGER_INTERVALS
+  // Mesmo passo: reenquadrar só quando o centro do dado saiu do miolo da faixa.
+  // Antes bastava o último preço chegar a dois intervalos de uma borda, o que
+  // fazia a faixa perseguir cada oscilação.
+  const hasDrifted = Math.abs(
+    (minimum + maximum) / 2 - (current.bottom + current.top) / 2,
+  ) > span * DOMAIN_RECENTER_FRACTION
 
-  if (movesUp || movesDown) {
+  if (hasDrifted && candidate.bottom !== current.bottom) {
     const candidateKey = getDomainKey(candidate)
     const shiftStartedAt = previous.shiftCandidateKey === candidateKey
       ? previous.shiftStartedAt ?? now
@@ -454,22 +500,10 @@ export const stabilizePriceChartDomain = (
       }
     }
 
-    return {
-      domain: candidate,
-      contractionCandidateKey: null,
-      contractionStartedAt: null,
-      shiftCandidateKey: null,
-      shiftStartedAt: null,
-    }
+    return settled(candidate)
   }
 
-  return {
-    domain: current,
-    contractionCandidateKey: null,
-    contractionStartedAt: null,
-    shiftCandidateKey: null,
-    shiftStartedAt: null,
-  }
+  return settled(current)
 }
 
 export const interpolatePriceChartDomain = (
@@ -488,7 +522,6 @@ export const interpolatePriceChartDomain = (
     bottom: interpolate(from.bottom, to.bottom),
     top: interpolate(from.top, to.top),
     step: interpolate(from.step, to.step),
-    trendShiftIntervals: from.trendShiftIntervals,
   }
 }
 

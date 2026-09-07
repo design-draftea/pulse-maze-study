@@ -71,9 +71,24 @@ export function useAnimatedMarketPrice(
       }
     }
 
-    frameId = window.requestAnimationFrame(animate)
+    // Oculta a página, os quadros param e o valor animado congela no meio do
+    // caminho. Na volta ele salta para o preço real em vez de continuar
+    // suavizando a partir de um número que já não vale.
+    const snapToTarget = () => {
+      if (document.visibilityState !== 'visible') return
 
-    return () => window.cancelAnimationFrame(frameId)
+      window.cancelAnimationFrame(frameId)
+      currentValueRef.current = targetPrice
+      setAnimatedValue(targetPrice)
+    }
+
+    frameId = window.requestAnimationFrame(animate)
+    document.addEventListener('visibilitychange', snapToTarget)
+
+    return () => {
+      document.removeEventListener('visibilitychange', snapToTarget)
+      window.cancelAnimationFrame(frameId)
+    }
   }, [targetPrice])
 
   useEffect(() => {

@@ -941,6 +941,7 @@ function App() {
           }
           entries={chartEntries}
           roundStart={marketRound.roundStart}
+          roundEnd={marketRound.roundEnd}
           currentSource={marketRound.currentPriceSource}
           currentStatus={marketRound.currentStatus}
           currentUpdatedAt={marketRound.currentPriceUpdatedAt}
