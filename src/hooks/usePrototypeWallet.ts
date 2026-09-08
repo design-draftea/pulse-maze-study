@@ -39,9 +39,16 @@ export interface PrototypeWalletSale {
   targetPrice?: number | null
 }
 
+const isTrackingTask = () => new URL(window.location.href).searchParams.get('task') === 'tracking'
+
+const trackingWallet = (state: PrototypeWalletState): PrototypeWalletState => (
+  isTrackingTask() ? { ...state, positionsByRound: {}, costBasisCentsByRound: {} } : state
+)
+
 const dollarsToCents = (value: number) => Math.round(value * 100)
 
 const persistWalletState = (state: PrototypeWalletState) => {
+  if (isTrackingTask()) return
   try {
     window.localStorage.setItem(
       PROTOTYPE_WALLET_STORAGE_KEY,
@@ -74,7 +81,7 @@ const loadWalletState = () => {
 
     url.searchParams.delete('resetWallet')
     window.history.replaceState(window.history.state, '', url)
-    return initialState
+    return trackingWallet(initialState)
   }
 
   try {
@@ -86,9 +93,9 @@ const loadWalletState = () => {
     )
 
     persistWalletState(state)
-    return state
+    return trackingWallet(state)
   } catch {
-    return createInitialWalletState()
+    return trackingWallet(createInitialWalletState())
   }
 }
 
@@ -114,7 +121,7 @@ export function usePrototypeWallet(currentRoundStart: number) {
     const handleStorage = (event: StorageEvent) => {
       if (event.key !== PROTOTYPE_WALLET_STORAGE_KEY) return
 
-      const nextState = deserializeWalletState(event.newValue)
+      const nextState = trackingWallet(deserializeWalletState(event.newValue))
       stateRef.current = nextState
       setState(nextState)
     }
@@ -124,7 +131,9 @@ export function usePrototypeWallet(currentRoundStart: number) {
   }, [])
 
   const purchase = useCallback((input: PrototypeWalletPurchase) => (
-    commit((current) => applyWalletPurchase(current, {
+    commit((current) => isTrackingTask()
+      ? { state: current, applied: false, balanceDeltaCents: 0 }
+      : applyWalletPurchase(current, {
       ...input,
       amountCents: dollarsToCents(input.amount),
     }))

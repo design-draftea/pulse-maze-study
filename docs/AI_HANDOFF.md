@@ -1,3 +1,9 @@
+## Tarefa 4 sem posições — 2026-09-08
+
+Branch `fix/maze-tracking-empty`. A rota `?task=tracking` filtra posições e custos abertos ao carregar e sincronizar a carteira, mantém histórico e saldo, bloqueia novas compras e não persiste esse estado sobre a carteira das outras tarefas. Validado com hook real no navegador (posição anterior, compra e storage event), aba ABIERTAS vazia, lint/build e 19 testes da carteira. Link da tarefa 4 no Maze precisa receber `?task=tracking` após deploy.
+
+Relatório observado: uma resposta de compra, 19,21s; URL inicial sem barra 14,3s, Home 1,3s, betslip 3,6s, purchase-complete 0,0s. Não é o mesmo total de 39,6s informado antes. Sem gravação não dá para atribuir os 14,3s a carregamento, leitura ou pausa.
+
 ## Correção Maze — 2026-09-08
 
 Branch `fix/maze-immediate-end`. Removidas as esperas de 1200ms e 2000ms antes do End task. O marco final protege os passos seguintes e bloqueia interações no documento do produto por até 15s; o iframe mantém o encerramento manual disponível. O botão pronto recebe clique síncrono; se indisponível, consulta a cada 250ms até 15s. Sem refresh.
