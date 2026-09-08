@@ -1,0 +1,42 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Maze completion capture regression</title>
+<h1>Captura da conclusão antes de encerrar</h1>
+<main id="results"></main>
+<script type="module">
+  import { markMazeStep } from '/src/services/mazeStep.ts'
+
+  const steps = ['onboarding-complete', 'purchase-complete', 'sale-complete', 'past-entries-open']
+  const step = new URL(location.href).searchParams.get('step')
+  if (steps.includes(step)) {
+    const widget = document.createElement('iframe')
+    widget.id = 'maze-tester-widget'
+    document.body.append(widget)
+    widget.contentDocument.body.innerHTML = '<button>End task</button>'
+    let observed = location.href
+    // Mesmo mecanismo de detecção do snippet público: childList, assíncrono.
+    new MutationObserver(() => { observed = location.href }).observe(document.body, { subtree: true, childList: true })
+    widget.contentDocument.querySelector('button').onclick = () => {
+      const passed = new URL(observed).searchParams.get('mazeStep') === step
+      parent.postMessage({ step, passed, observed }, location.origin)
+    }
+    markMazeStep(step)
+  } else {
+    const frames = new Map()
+    window.addEventListener('message', event => {
+      if (event.origin !== location.origin || frames.get(event.data?.step)?.contentWindow !== event.source) return
+      const row = document.getElementById(event.data.step)
+      row.textContent = `${event.data.passed ? 'PASS' : 'FAIL'} — ${event.data.step}: URL capturada antes de End task`
+    })
+    steps.forEach(step => {
+      const row = document.createElement('p')
+      row.id = step
+      row.textContent = `PENDING — ${step}`
+      document.querySelector('#results').append(row)
+      const frame = document.createElement('iframe')
+      frame.src = `?step=${step}&lwt=true`
+      frames.set(step, frame)
+      document.body.append(frame)
+    })
+  }
+</script>

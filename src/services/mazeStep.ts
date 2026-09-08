@@ -82,6 +82,19 @@ const AUTO_END_KEY = 'pulse.maze-auto-end.v1'
 const finishing = new WeakSet<Window>()
 const TESTER_FRAME_ID = 'maze-tester-widget'
 const END_LABELS = new Set(['encerrar tarefa', 'end task', 'finalizar tarea', 'terminar tarea'])
+export const MAZE_CAPTURE_SETTLE_MS = 250
+
+/**
+ * O snippet do Maze detecta URLs em um MutationObserver de childList, não em
+ * replaceState. Uma mutação neutra garante a observação mesmo sem render React.
+ * O callback roda ao liberar a pilha; nunca encerrar na mesma chamada do marco.
+ */
+const notifyMazeNavigation = () => {
+  if (typeof document === 'undefined' || !document.body) return
+  const marker = document.createComment('maze navigation')
+  document.body.appendChild(marker)
+  marker.remove()
+}
 
 /** Integração não oficial: usa o controle real do widget, sem forjar resultados. */
 export const findMazeEndButton = (doc: Document): HTMLButtonElement | undefined => {
@@ -135,7 +148,8 @@ export const resumeMazeAutoEnd = () => {
     }
     window.setTimeout(poll, 250)
   }
-  poll()
+  // Deixa o MutationObserver registrar/enviar PAGE_CHANGE antes de End task.
+  window.setTimeout(poll, MAZE_CAPTURE_SETTLE_MS)
 }
 
 /**
@@ -147,8 +161,7 @@ export const resumeMazeAutoEnd = () => {
  * no meio da missão.
  *
  * Os quatro marcos finais encerram pelo botão real do widget na página atual.
- * O teste publicado de onboarding confirmou o registro da URL sem recarga.
- * O controle disponível é acionado imediatamente, sem espera artificial.
+ * O encerramento aguarda a observação da navegação, sem recarregar a página.
  */
 export const markMazeStep = (step: MazeStep) => {
   if (typeof window === 'undefined' || finishing.has(window)) return
@@ -159,6 +172,7 @@ export const markMazeStep = (step: MazeStep) => {
     '',
     buildMazeStepUrl(window.location.href, step),
   )
+  notifyMazeNavigation()
 
   if (!MAZE_COMPLETION_STEPS.has(step)) return
 
