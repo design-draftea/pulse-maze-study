@@ -1,9 +1,12 @@
 # Plano da pesquisa — Draftea Pulse no Maze
 
-Documentação para revisão interna. **Não traduzir ainda**: a tradução para o
-espanhol do México acontece depois da aprovação deste conteúdo. A interface do
-protótipo é em espanhol; apenas este plano e as perguntas do Maze estão em
-português nesta etapa.
+Documentação para revisão interna em português do Brasil, sincronizada em
+2026-09-07 com o rascunho atual do Maze. No Maze, os textos da pesquisa estão em
+espanhol do México. Os nomes de elementos do produto citados nas perguntas
+permanecem em espanhol para corresponder à interface.
+
+Este documento reproduz os blocos existentes e sua ordem; sugestões ainda não
+aplicadas ficam separadas nas notas de revisão ao final.
 
 ## Objetivo
 
@@ -12,7 +15,7 @@ acompanhamento de um moderador.
 
 ## Estrutura
 
-1. Conhecer o Pulse pelo onboarding.
+1. Descobrir como o Pulse funciona.
 2. Fazer uma entrada de US$10.
 3. Vender a entrada antes do fim da rodada.
 4. Encontrar o histórico das entradas já feitas.
@@ -27,28 +30,16 @@ Conheça o Draftea Pulse antes do lançamento
 
 **Texto**
 
-O Draftea Pulse é um produto novo, que pretendemos lançar em breve. Antes disso,
-estamos testando a experiência com um grupo selecionado de pessoas que já usam a
-Draftea — e você é uma delas.
+O Draftea Pulse é um produto novo, que pretendemos lançar em breve. Antes do
+lançamento, estamos testando a experiência com um grupo selecionado de usuários,
+e você é um deles.
 
-Esta é a sua primeira vez no Pulse, e é justamente essa primeira impressão que
-queremos entender. Use como usaria normalmente e responda com base no que você
-entendeu e sentiu. Não existe resposta certa ou errada: apontar o que confundiu
-ajuda mais do que elogiar.
+Nesta atividade, você vai conhecer o Pulse e realizar algumas tarefas. Use como
+usaria normalmente e responda com base no que você entendeu e sentiu. Não existe
+resposta certa ou errada: apontar o que confundiu ajuda mais do que elogiar.
 
 A atividade dura aproximadamente 10 minutos. Todos os valores e operações são
 simulados.
-
-## Consentimento
-
-Durante o teste, podemos registrar sua interação com a experiência para entender
-como ela é utilizada. Os dados serão usados apenas para analisar e melhorar o
-produto.
-
-Você aceita participar?
-
-1. Sim, aceito.
-2. Prefiro não participar.
 
 ## Perguntas iniciais
 
@@ -72,7 +63,7 @@ Com que frequência você acompanha o preço do Bitcoin ou de outras criptomoeda
 4. Quase nunca.
 5. Nunca.
 
-## Tarefa 1: onboarding
+## Tarefa 1: primeiros passos
 
 **Texto da tarefa**
 
@@ -102,7 +93,7 @@ Quanto a explicação “Cómo funciona Draftea Pulse” ajudou você a entender
 produto?
 
 1 significa “não ajudou”.
-7 significa “ajudou muito”.
+5 significa “ajudou muito”.
 
 ## Tarefa 2: compra
 
@@ -118,7 +109,7 @@ Use US$10 nessa previsão e confirme a operação.
 Quão fácil ou difícil foi fazer a entrada?
 
 1 significa “muito difícil”.
-7 significa “muito fácil”.
+5 significa “muito fácil”.
 
 **Pergunta de múltipla escolha**
 
@@ -131,13 +122,15 @@ representa?
 4. O preço de uma participação.
 5. Não tenho certeza.
 
-**Pergunta opcional de múltipla escolha**
+**Pergunta de múltipla escolha — cenário de perda**
 
-Esse valor em “Ganancia potencial” inclui os US$10 que você usou?
+Imagine que você usa US$10 em uma entrada e a mantém até o final da rodada.
+Se sua previsão estiver errada, o que acontece com esses US$10?
 
-1. Sim, é o total que eu receberia: os US$10 mais o ganho.
-2. Não, é só o ganho, que viria além dos US$10.
-3. Não tenho certeza.
+1. Perco os US$10 que usei na entrada.
+2. Recupero os US$10, mas não obtenho nenhum ganho.
+3. Os US$10 ficam na minha conta para usar em outra rodada.
+4. Não tenho certeza.
 
 ## Tarefa 3: venda
 
@@ -152,7 +145,7 @@ Venda toda a sua entrada.
 Quão fácil ou difícil foi vender sua entrada?
 
 1 significa “muito difícil”.
-7 significa “muito fácil”.
+5 significa “muito fácil”.
 
 **Pergunta de múltipla escolha**
 
@@ -163,10 +156,6 @@ O que determina quanto você recebe ao vender antes do final da rodada?
 3. O preço objetivo da rodada.
 4. Cada participação sempre paga US$1.
 5. Não tenho certeza.
-
-**Pergunta aberta opcional**
-
-Alguma informação deixou você com dúvida durante a venda?
 
 ## Tarefa 4: acompanhamento
 
@@ -182,7 +171,7 @@ Encontre onde elas ficam.
 Quão fácil ou difícil foi encontrar suas entradas passadas?
 
 1 significa “muito difícil”.
-7 significa “muito fácil”.
+5 significa “muito fácil”.
 
 **Pergunta de múltipla escolha**
 
@@ -194,13 +183,11 @@ Antes de procurar, onde você imaginou que essas informações estariam?
 4. Na tela inicial.
 5. Não fazia ideia.
 
-**Pergunta aberta opcional**
-
-O que você esperava ver nessa tela e não encontrou?
-
 ## Avaliação final
 
-Use uma escala com:
+Indique quanto você concorda com cada afirmação:
+
+Escala:
 
 1. Discordo totalmente.
 2. Discordo.
@@ -210,19 +197,15 @@ Use uma escala com:
 
 Afirmações:
 
-1. Entendi o que precisava prever em uma rodada.
-2. Entendi o que é o preço objetivo.
-3. Entendi o que representa o percentual de UP ou DOWN.
-4. Ficou claro quanto eu poderia receber caso acertasse.
-5. Consegui diferenciar o valor total recebido do meu ganho.
-6. Entendi como vender antes do final da rodada.
-7. As informações de preço pareceram claras.
-8. Consegui encontrar o histórico das minhas entradas.
-9. Eu me sentiria seguro usando essa experiência.
+1. Entendi o que é o preço objetivo.
+2. Entendi o que representa o percentual de UP ou DOWN.
+3. Ficou claro quanto eu poderia receber caso acertasse.
+4. Consegui diferenciar o valor total recebido do meu ganho.
+5. Eu me sentiria capaz de usar o Draftea Pulse sem ajuda de outra pessoa.
 
 ## Perguntas finais
 
-**Obrigatória**
+**Opcional**
 
 O que foi mais confuso para você durante o teste?
 
@@ -252,105 +235,65 @@ Obrigado por participar!
 Suas respostas vão nos ajudar a tornar o Draftea Pulse mais claro, simples e
 fácil de usar.
 
-Agradecemos pelo seu tempo e pela contribuição.
+Agradecemos pelo seu tempo e pelos seus comentários.
 
 ---
 
-## Observação para a revisão
+## Configuração observada no Maze
 
-### As perguntas da tarefa 1 chamam a explicação pelo nome que está na tela
+- O estudo permanece em rascunho.
+- A sequência acima contém 21 blocos entre as telas de boas-vindas e encerramento.
+- Todas as escalas numéricas vão de 1 a 5; a matriz também tem cinco alternativas.
+- As perguntas de múltipla escolha usam seleção única e alternativas embaralhadas.
+  A ordem das alternativas neste documento é a do editor, não necessariamente a
+  ordem apresentada a cada participante.
+- A matriz tem cinco afirmações, uma resposta por afirmação e ordem fixa.
+- As perguntas abertas finais sobre confusão, mudança prioritária e comentários
+  adicionais são opcionais. As demais perguntas são obrigatórias.
+- Não há bloco de consentimento nem as antigas perguntas opcionais sobre inclusão
+  dos US$10, dúvidas durante a venda ou informações ausentes no histórico no
+  rascunho observado. Por isso, elas não integram o questionário acima.
 
-O texto dizia “o guia”. O app nunca usa essa palavra: tanto o botão de
-interrogação quanto o título do bottom sheet dizem **Cómo funciona Draftea
-Pulse**. Perguntar sobre “o guia” obriga o participante a adivinhar a que nos
-referimos — ou pior, sugere que existia algo que ele deveria ter encontrado.
+## Notas de revisão — separadas do questionário atual
 
-Fica em aberto um ponto que o nome não resolve: as duas perguntas assumem que a
-pessoa abriu a explicação. A tarefa pede para descobrir como o produto funciona,
-não para abrir a interrogação, então quem explorar o app por conta própria
-receberá perguntas sobre algo que não viu. O bloco de Website Test do Maze tem
-`Conditions`, que permite pular perguntas conforme o caminho percorrido: uma
-condição em `mazeStep=onboarding-complete` mostraria as duas apenas a quem de
-fato percorreu a explicação. Vale avaliar antes da coleta.
+### Exploração livre na tarefa 1
 
-### Por que a tarefa 1 volta a citar 67%
+A instrução permite descobrir o funcionamento pela interface, FAQ ou onboarding.
+O encerramento configurado atualmente ocorre ao abrir a explicação pelo botão
+`?` e chegar ao final do onboarding, conforme confirmado pela pessoa responsável
+pelo estudo. Essa configuração foi mantida.
 
-A pergunta de múltipla escolha chegou a ser reescrita sem o número, por medo de
-ambiguidade: ao fechar a explicação, o participante encontra a Home com outro
-percentual, e a pergunta não dizia a qual dos dois se referia.
+Uma exploração válida por outro caminho pode não cumprir esse critério técnico.
+Na análise, diferenciar conclusão do caminho esperado de compreensão do produto,
+usando também a resposta aberta sobre como funciona uma rodada. As perguntas
+sobre “Cómo funciona Draftea Pulse” continuam presumindo que a explicação foi
+vista; não foi aplicada uma condição para ocultá-las em outros caminhos.
 
-A reescrita saiu pior. Sem o valor, a alternativa correta virou “o preço de cada
-participação” — verdadeira, mas abstrata, e sem a ligação que a pergunta existe
-para testar: **67% e 67¢ são o mesmo número**. É isso que o terceiro passo da
-explicação ensina, e o título dele é literalmente `El % indica el precio`.
+### Pergunta sobre UP em 67%
 
-Nomear a tela resolveu a ambiguidade sem custo, então o texto aprovado volta
-inteiro. O valor é seguro de citar: o card do onboarding é texto fixo no
-componente — `67%`, `67¢`, `14.93 participaciones`, `US$14,93` e `+US$4,93` —, e
-não dado de mercado. Se algum dia esse exemplo passar a usar cotação real, esta
-pergunta precisa ser revista junto.
+A pergunta atual foi preservada: mede a associação entre o percentual e o preço
+por participação. O exemplo citado pertence à explicação, não à cotação variável
+da tela inicial. A alternativa esperada é “Cada participação custa US$0,67”.
 
-Sobre as alternativas: a correta é a **1**. A 2 lê o percentual como variação
-exigida do Bitcoin, a 3 como retorno sobre o valor utilizado e a 4 como ganho por
-participação. As três são leituras plausíveis para quem não fez a ligação entre o
-percentual e o preço, e é isso que as torna úteis.
+Foi sugerido separar significado do percentual e preço por participação em duas
+perguntas, mas essa proposta ainda não foi aplicada no Maze e não integra este
+questionário.
 
-### A tarefa 2 também deixou de citar valores
+### Compra e cenário de perda
 
-As duas perguntas mencionavam US$14,93 e US$4,93. Diferente do caso do guia,
-esses valores vêm mesmo da cotação do instante da compra: com um mercado que se
-mova, quem comprar com UP em 65% vê US$15,38, e a pergunta fica factualmente
-errada para parte da amostra.
+A pergunta sobre `Ganancia potencial` aparece depois da escala de facilidade da
+compra e antes da tarefa de venda. Ela usa o rótulo, sem fixar o valor mostrado,
+porque esse valor depende da cotação no momento da compra. A leitura esperada é
+“o valor total que eu receberia”; confundi-lo com ganho líquido pode indicar
+ambiguidade do rótulo.
 
-Agora as duas se apoiam no rótulo `Ganancia potencial`, que está sempre na tela,
-e não no número que ele carrega. A obrigatória continua testando a mesma
-confusão. A opcional deixou de ser uma conta e virou uma pergunta de inclusão:
-o valor mostrado já contém os US$10, ou vem além deles?
+A nova pergunta de perda vem imediatamente depois. Ela especifica que a entrada
+foi mantida até o final da rodada, para não se confundir com venda antecipada.
+A alternativa esperada é “Perco os US$10 que usei na entrada”.
 
-O que se perde é a comparação exata entre participantes — não dá mais para dizer
-que alguém “acertou o US$14,93”. O que se mede passa a ser a relação entre os
-valores, que era o objetivo desde o começo: se a pessoa entende que o número na
-tela já inclui o que ela gastou.
+### Matriz reduzida
 
-Com isso, nenhuma pergunta do estudo depende mais de um valor específico
-aparecer na tela. O plano funciona tanto com um mercado simulado parado quanto
-com um que se mova.
-
-### Como ler a resposta da tarefa 2
-
-O betslip do Pulse mostra um único número, sob o rótulo `Ganancia potencial`,
-embora o valor seja o total recebido e não o ganho. A alternativa 2 é a leitura
-que o rótulo induz; a 1 é a correta.
-
-Uma taxa alta na alternativa 2 não indica desatenção de quem respondeu: indica
-que o rótulo está ensinando a coisa errada. É um resultado acionável sobre o
-produto, e vale registrá-lo como tal na análise.
-
-### Por que a tarefa 4 deixou de ser sobre o assistente
-
-A tarefa era encontrar, no `Pregúntale a Pulse`, a explicação para o preço do
-Bitcoin divergir de outra plataforma. Ela saiu porque o estudo mede a experiência
-de comprar, vender e acompanhar — e o assistente é o que socorre quem não
-conseguiu, não o caminho que se quer observar.
-
-No lugar entrou o acompanhamento: encontrar as entradas já feitas, em
-`Entradas → PASADAS`. É uma pergunta de arquitetura da informação, e a
-alternativa `Movimientos` existe de verdade na navbar. Ela mede se o nome da
-seção corresponde ao que a pessoa espera encontrar ali: uma taxa alta em
-`Movimientos` diz que as duas seções estão disputando o mesmo significado na
-cabeça de quem usa.
-
-A afirmação sobre encontrar o histórico entrou na avaliação final pelo mesmo
-motivo, e a estrutura do estudo passa a citar acompanhamento no lugar da ajuda.
-
-### Um achado que ficou pelo caminho
-
-Perguntas naturais sobre a divergência de preço entre plataformas não chegam ao
-FAQ `price-difference` quando citam “el precio de bitcoin”. O assistente as
-resolve como consulta ao preço ao vivo e devolve a cotação do momento — o número
-que a pessoa já está olhando, e que não explica nada.
-
-Isso foi descoberto enquanto a tarefa 4 ainda era sobre o assistente. Com ela
-fora, deixou de bloquear o estudo, mas **continua valendo como ticket para o
-Pulse principal**: quem faz essa pergunta no produto hoje não recebe a resposta
-que existe justamente para ela.
+A matriz passou de nove para cinco afirmações. Foram retiradas as afirmações
+sobre o que prever, como vender, clareza genérica dos preços e encontrar o
+histórico, já abordadas em outras perguntas ou tarefas. A afirmação de confiança
+agora trata da capacidade de usar o produto sem ajuda de outra pessoa.
