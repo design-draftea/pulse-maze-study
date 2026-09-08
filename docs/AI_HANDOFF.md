@@ -1,3 +1,12 @@
+## Experimento de viewport somente tarefa 1 — 2026-09-08
+
+- Branch `fix/maze-task1-viewport`. Implementação local opt-in `?task=onboarding&viewportFix=1`; links existentes e tarefas 2–4 não ativam o ajuste.
+- `src/services/mazeTask1Viewport.ts` solicita recálculo de layout na abertura e nas mudanças da visualViewport. Restaura topo somente no primeiro segundo, sem hash e antes da primeira interação. Não modifica iframe, caminhos ou encerramento do Maze.
+- `src/main.tsx` instala o experimento e limpa listeners no HMR; teste de isolamento em `tests/mazeTask1Viewport.test.ts`.
+- Validação: lint, build, teste do opt-in e 39 testes Maze passaram. Página local abriu no Chrome com header completo. Ainda NÃO validado o recorte no iPhone físico nem o widget real; resize sintético é uma hipótese experimental, não garantia de corrigir composição nativa.
+- Servidor local porta 5196, acesso LAN disponível durante a sessão. Nenhum commit, PR, merge, deploy ou edição de estudo nesta etapa.
+- Próximo passo: autorização de publicação da variante e configuração de uma cópia da tarefa 1 com paths regravados preservando os parâmetros; validar primeiro carregamento no iPhone e classificação real. Não alterar tarefas 2–4.
+
 ## Tarefa 4 sem posições — 2026-09-08
 
 Branch `fix/maze-tracking-empty`. A rota `?task=tracking` filtra posições e custos abertos ao carregar e sincronizar a carteira, mantém histórico e saldo, bloqueia novas compras e não persiste esse estado sobre a carteira das outras tarefas. Validado com hook real no navegador (posição anterior, compra e storage event), aba ABIERTAS vazia, lint/build e 19 testes da carteira. Link da tarefa 4 no Maze precisa receber `?task=tracking` após deploy.
