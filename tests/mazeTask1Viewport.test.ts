@@ -2,8 +2,13 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { isTask1ViewportExperiment, installTask1ViewportExperiment } from '../src/services/mazeTask1Viewport.ts'
 
-test('viewport experiment requires explicit onboarding opt-in', () => {
+test('viewport adjustment supports all study tasks without changing their URLs', () => {
   assert.equal(isTask1ViewportExperiment('?task=onboarding&viewportFix=1&lwt=true'), true)
+  for (const search of ['?lwt=true', '?task=onboarding&lwt=true', '?task=sell&lwt=true', '?task=tracking&lwt=true', '?task=buy&lwt=true']) {
+    assert.equal(isTask1ViewportExperiment(search), true, search)
+  }
+  assert.equal(isTask1ViewportExperiment('?task=unrelated&lwt=true'), false)
+  assert.equal(isTask1ViewportExperiment('?lwt=false'), false)
   for (const search of ['', '?viewportFix=1', '?task=onboarding', '?task=sell&viewportFix=1', '?task=tracking&viewportFix=1', '?task=buy&viewportFix=1']) {
     assert.equal(isTask1ViewportExperiment(search), false, search)
   }
