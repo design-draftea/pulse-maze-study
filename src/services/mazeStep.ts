@@ -78,14 +78,8 @@ export const MAZE_COMPLETION_STEPS: ReadonlySet<MazeStep> = new Set([
   'past-entries-open',
 ])
 
-/**
- * Espera antes de encerrar, para o aviso de sucesso e a saída do bottom sheet
- * terminarem de aparecer. Encerrar no mesmo quadro apagaria da tela — e da
- * gravação — a confirmação que a pessoa acabou de conquistar.
- */
-export const MAZE_COMPLETION_END_DELAY_MS = 1_200
-
 const AUTO_END_KEY = 'pulse.maze-auto-end.v1'
+const finishing = new WeakSet<Window>()
 const TESTER_FRAME_ID = 'maze-tester-widget'
 const END_LABELS = new Set(['encerrar tarefa', 'end task', 'finalizar tarea', 'terminar tarea'])
 
@@ -119,19 +113,23 @@ export const resumeMazeAutoEnd = () => {
     || Date.now() - pending.createdAt < 0 || Date.now() - pending.createdAt > 30_000
     || !step || !MAZE_COMPLETION_STEPS.has(step as MazeStep)) return
 
+  finishing.add(window)
+  // Impede cliques/toques/teclas no produto enquanto o widget encerra a missão.
+  // O documento do iframe continua acessível, inclusive para encerramento manual.
+  const block = (event: Event) => { event.preventDefault(); event.stopImmediatePropagation() }
+  const events = ['pointerdown', 'pointerup', 'click', 'keydown', 'touchstart']
+  events.forEach(type => document.addEventListener(type, block, { capture: true, passive: false }))
+  const release = () => {
+    events.forEach(type => document.removeEventListener(type, block, true))
+    finishing.delete(window)
+  }
+  // Se o widget mudar ou falhar, devolve o controle para encerramento manual.
+  window.setTimeout(release, 15_000)
   const deadline = Date.now() + 15_000
-  let candidate: HTMLButtonElement | undefined
-  let readySince = 0
   const poll = () => {
-    if (window.location.href !== href || Date.now() > deadline) return
+    if (window.location.href !== href || Date.now() >= deadline) return
     const button = findMazeEndButton(document)
-    if (button !== candidate) {
-      candidate = button
-      readySince = Date.now()
-    }
-    // Dá tempo ao snippet para observar a URL final. Não é confirmação de upload do Maze;
-    // a classificação do path ainda exige validação no estudo publicado.
-    if (button && Date.now() - readySince >= 2_000) {
+    if (button) {
       button.click()
       return
     }
@@ -150,10 +148,10 @@ export const resumeMazeAutoEnd = () => {
  *
  * Os quatro marcos finais encerram pelo botão real do widget na página atual.
  * O teste publicado de onboarding confirmou o registro da URL sem recarga.
- * Mantemos as esperas para a confirmação visual e a estabilização do widget.
+ * O controle disponível é acionado imediatamente, sem espera artificial.
  */
 export const markMazeStep = (step: MazeStep) => {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined' || finishing.has(window)) return
   if (getMazeStep(window.location.href) === step) return
 
   window.history.replaceState(
@@ -175,5 +173,5 @@ export const markMazeStep = (step: MazeStep) => {
     }
   } catch { /* Armazenamento bloqueado: o botão manual continua disponível. */ }
 
-  window.setTimeout(resumeMazeAutoEnd, MAZE_COMPLETION_END_DELAY_MS)
+  resumeMazeAutoEnd()
 }

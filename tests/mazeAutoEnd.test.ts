@@ -10,7 +10,7 @@ function setup({ frame = true, blocked = false } = {}) {
   const values = new Map<string, string>()
   const timers: Array<() => void> = []
   const button = { disabled: false, textContent: 'Encerrar tarefa', click: () => { clicks++ } }
-  const doc = { getElementById: () => frame ? { contentDocument: { querySelectorAll: () => [button] } } : null }
+  const doc = { addEventListener() {}, removeEventListener() {}, getElementById: () => frame ? { contentDocument: { querySelectorAll: () => [button] } } : null }
   const win = {
     location: { href: base, reload() { reloads++ } },
     sessionStorage: {
@@ -42,14 +42,11 @@ test('experimento encerra onboarding uma vez sem recarregar', () => {
 })
 
 for (const step of ['onboarding-complete', 'purchase-complete', 'sale-complete', 'past-entries-open'] as const) {
-  test(`${step}: encerra sem recarga e clica uma só vez após widget estabilizar`, () => {
+  test(`${step}: encerra sem recarga e clica imediatamente uma só vez`, () => {
     const env = setup()
     try {
       markMazeStep(step)
-      env.advance(1200)
-      env.advance(1000)
-      assert.equal(env.clicks(), 0)
-      env.advance(1000)
+      // Não executamos timers: o clique precisa ocorrer na mesma chamada.
       assert.equal(env.clicks(), 1)
       resumeMazeAutoEnd()
       env.advance(3000)
@@ -63,7 +60,11 @@ for (const scenario of ['direct', 'builder', 'blocked', 'changed', 'expired', 'd
     const env = setup({ frame: scenario !== 'builder', blocked: scenario === 'blocked' })
     try {
       if (scenario === 'direct') env.win.location.href += '&mazeStep=purchase-complete'
-      else markMazeStep('purchase-complete')
+      else {
+        env.button.disabled = true
+        markMazeStep('purchase-complete')
+        env.button.disabled = false
+      }
       if (scenario === 'changed') env.win.location.href = base
       if (scenario === 'expired') env.advance(31000)
       if (scenario === 'disabled') env.button.disabled = true
@@ -71,6 +72,22 @@ for (const scenario of ['direct', 'builder', 'blocked', 'changed', 'expired', 'd
       resumeMazeAutoEnd()
       for (let i = 0; i < 70; i++) env.advance()
       assert.equal(env.clicks(), 0)
+    } finally { env.restore() }
+  })
+}
+
+for (const step of ['onboarding-complete', 'purchase-complete', 'sale-complete', 'past-entries-open'] as const) {
+  test(`${step}: ação seguinte não sobrescreve conclusão com widget atrasado`, () => {
+    const env = setup()
+    try {
+      env.button.disabled = true
+      markMazeStep(step)
+      markMazeStep('entries-open')
+      assert.equal(new URL(env.win.location.href).searchParams.get('mazeStep'), step)
+      env.button.disabled = false
+      env.advance(250)
+      assert.equal(env.clicks(), 1)
+      assert.equal(env.reloads(), 0)
     } finally { env.restore() }
   })
 }

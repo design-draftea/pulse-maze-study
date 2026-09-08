@@ -1,3 +1,9 @@
+## Correção Maze — 2026-09-08
+
+Branch `fix/maze-immediate-end`. Removidas as esperas de 1200ms e 2000ms antes do End task. O marco final protege os passos seguintes e bloqueia interações no documento do produto por até 15s; o iframe mantém o encerramento manual disponível. O botão pronto recebe clique síncrono; se indisponível, consulta a cada 250ms até 15s. Sem refresh.
+
+Validação: 39 testes Maze, lint e build passaram. Harness temporário no navegador: clique em 1,4ms, um acionamento, URL final preservada e clique seguinte bloqueado. Harness removido. Falta confirmar classificação e captura do marco final em nova resposta real do Maze após deploy; o teste local usa widget simulado.
+
 # Handoff entre Codex e Claude
 
 ## Remoção de refresh em todas as tarefas — 2026-09-07
