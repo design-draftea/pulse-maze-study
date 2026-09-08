@@ -233,25 +233,29 @@
 
 .previous-rounds__result {
   display: grid;
-  width: 24px;
-  height: 24px;
-  flex: 0 0 24px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
   place-items: center;
   border-radius: 50%;
 }
 
 .previous-rounds__result--up {
-  background: var(--color-fill-success);
+  background: var(--color-background-success);
 }
 
 .previous-rounds__result--down {
-  background: var(--color-fill-error);
+  background: var(--color-background-error);
 }
 
 .previous-rounds__result img {
   display: block;
   width: 24px;
   height: 24px;
+}
+
+.previous-rounds__result--down img {
+  transform: rotate(180deg);
 }
 
 .previous-rounds__light {
