@@ -5,9 +5,9 @@ import {
   type AnimationEvent as ReactAnimationEvent,
   type UIEvent,
 } from 'react'
+import entryDirectionDown from '../../assets/entryDirectionDown.svg'
+import entryDirectionUp from '../../assets/entryDirectionUp.svg'
 import iconClock from '../../assets/iconClock.svg'
-import iconDoubleChevronsDown from '../../assets/iconDoubleChevronsDown.svg'
-import iconDoubleChevronsUp from '../../assets/iconDoubleChevronsUp.svg'
 import lightPriceTarget from '../../assets/lightPriceTarget.svg'
 import { BTC_DISPLAY_TIME_ZONE } from '../../services/marketData'
 import './PreviousRounds.css'
@@ -220,7 +220,7 @@ export function PreviousRounds({
                     aria-label={isUp ? 'Resultado: arriba' : 'Resultado: abajo'}
                   >
                     <img
-                      src={isUp ? iconDoubleChevronsUp : iconDoubleChevronsDown}
+                      src={isUp ? entryDirectionUp : entryDirectionDown}
                       alt=""
                       aria-hidden="true"
                     />
