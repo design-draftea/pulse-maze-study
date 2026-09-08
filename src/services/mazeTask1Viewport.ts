@@ -1,7 +1,9 @@
-/** Opt-in experiment: never enable on the shared purchase/start URL. */
+/** Keep the task-1 opt-in and enable the same behavior in the other Maze tasks. */
 export function isTask1ViewportExperiment(search: string): boolean {
   const params = new URLSearchParams(search)
-  return params.get('task') === 'onboarding' && params.get('viewportFix') === '1'
+  const task = params.get('task')
+  return (task === 'onboarding' && params.get('viewportFix') === '1') ||
+    (params.get('lwt') === 'true' && (task === null || ['onboarding', 'buy', 'sell', 'tracking'].includes(task)))
 }
 
 /** Refresh initial mobile geometry without taking over subsequent user scrolling. */
