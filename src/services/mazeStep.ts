@@ -19,6 +19,18 @@ export type MazeStep =
 export const MAZE_STEP_PARAM = 'mazeStep'
 
 /**
+ * A Tarefa 1 mede a compreensão do onboarding, não a descoberta do ícone de
+ * ajuda. `task=onboarding` é o identificador estável do link inicial: o `lwt`
+ * do widget pode ser acrescentado depois de a aplicação já ter carregado.
+ * Uma URL já marcada não deve reabri-lo depois de a pessoa fechar ou concluir.
+ */
+export const isMazeTask1OnboardingStart = (search: string): boolean => {
+  const params = new URLSearchParams(search)
+  return params.get('task') === 'onboarding'
+    && !params.has(MAZE_STEP_PARAM)
+}
+
+/**
  * Parâmetros do estudo, na ordem em que devem aparecer.
  *
  * O Maze compara URLs como texto, e o `URLSearchParams.set` acrescenta no fim.

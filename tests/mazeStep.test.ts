@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   buildMazeStepUrl,
   getMazeStep,
+  isMazeTask1OnboardingStart,
   markMazeStep,
 } from '../src/services/mazeStep.ts'
 
@@ -62,6 +63,24 @@ const correrTemporizadores = (fake: FakeWindow) => {
 
 test.afterEach(() => {
   delete (globalThis as { window?: unknown }).window
+})
+
+test('abre o onboarding guiado somente no link inicial da Tarefa 1', () => {
+  assert.equal(isMazeTask1OnboardingStart('?task=onboarding'), true)
+  assert.equal(isMazeTask1OnboardingStart('?task=onboarding&lwt=true'), true)
+  assert.equal(isMazeTask1OnboardingStart('?lwt=true&task=onboarding'), true)
+
+  for (const search of [
+    '',
+    '?lwt=true',
+    '?task=buy&lwt=true',
+    '?task=sell&lwt=true',
+    '?task=tracking&lwt=true',
+    '?task=onboarding&lwt=true&mazeStep=onboarding-open',
+    '?task=onboarding&lwt=true&mazeStep=onboarding-complete',
+  ]) {
+    assert.equal(isMazeTask1OnboardingStart(search), false, search)
+  }
 })
 
 test('marca o passo na URL', () => {

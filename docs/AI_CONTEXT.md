@@ -151,5 +151,11 @@ Uma tarefa só pode ser descrita como concluída quando o escopo solicitado foi 
 
 ## Encerramento das tarefas Maze
 
+- No link inicial de participante da Tarefa 1 (`task=onboarding`; o Maze
+  acrescenta `lwt=true` ao executar), o onboarding abre já no card 1 e marca
+  `onboarding-open`. Só o CTA final
+  `Entendido, empezar` marca `onboarding-complete`; fechar pelo X, overlay ou
+  Escape mantém a tarefa incompleta e não aciona o widget. O produto fora desse
+  link continua com onboarding opcional.
 - Os quatro marcos finais atualizam a URL e acionam o botão real do widget na mesma página, sem refresh e sem parâmetro experimental. Preservam a espera visual de 1,2s e a estabilidade do botão por 2s. O botão manual permanece disponível se a integração não puder encerrar.
 - Um estudo publicado de onboarding confirmou URL final e sucesso sem recarga; isso não garante classificação direta nem valida as outras tarefas no relatório.
