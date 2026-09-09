@@ -1,3 +1,12 @@
+## Tarefa 1 guiada do Maze — 2026-09-09
+
+- Em andamento na branch `fix/maze-task1-guided-onboarding`, criada de `origin/main` em `3c96f96`, no worktree `.worktrees/fix-maze-task1-guided-onboarding`.
+- Objetivo: abrir automaticamente o onboarding no primeiro card somente para o link de participante da Tarefa 1, terminar somente no CTA final e reduzir a carga do questionário inicial.
+- Escopo: `task=onboarding` sem `mazeStep` abre e registra `onboarding-open`; o widget acrescenta `lwt=true` ao executar. O X, overlay e Escape apenas fecham o sheet. `Entendido, empezar` continua sendo o único caminho para `onboarding-complete` e para o encerramento pelo widget. O produto normal mantém a abertura voluntária pelo ícone `?`.
+- Questionário: removida a pergunta aberta obrigatória; após o onboarding ficam a múltipla escolha sobre UP 67% e a escala de clareza, nessa ordem. As abertas opcionais finais permanecem.
+- Validação local: 40 testes Maze, lint, typecheck, build e `git diff --check` passaram. No navegador local, o link de participante abriu no card 1 e registrou `onboarding-open`; fechar retornou à Home mantendo esse passo, sem completar; reabrir e concluir o quarto card gerou `onboarding-complete` e fechou o sheet. A Home sem parâmetros continuou sem abertura automática. O widget real do Maze não estava presente nessa validação.
+- Pendente: commit, Pull Request, merge, deploy e a edição da tarefa no Maze/regravação do caminho esperado. A edição no Maze deve ocorrer apenas depois de a versão com este código estar publicada e de confirmação no momento de salvar.
+
 ## Experimento de viewport somente tarefa 1 — 2026-09-08
 
 - Branch `fix/maze-task1-viewport`. Implementação local opt-in `?task=onboarding&viewportFix=1`; links existentes e tarefas 2–4 não ativam o ajuste.

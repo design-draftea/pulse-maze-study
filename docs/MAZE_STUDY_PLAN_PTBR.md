@@ -1,12 +1,14 @@
 # Plano da pesquisa — Draftea Pulse no Maze
 
-Documentação para revisão interna em português do Brasil, sincronizada em
-2026-09-07 com o rascunho atual do Maze. No Maze, os textos da pesquisa estão em
-espanhol do México. Os nomes de elementos do produto citados nas perguntas
-permanecem em espanhol para corresponder à interface.
+Documentação para revisão interna em português do Brasil. Ela descreve a
+configuração aprovada do estudo, inclusive mudanças que serão aplicadas ao
+rascunho do Maze depois da publicação do código. No Maze, os textos da pesquisa
+estão em espanhol do México. Os nomes de elementos do produto citados nas
+perguntas permanecem em espanhol para corresponder à interface.
 
-Este documento reproduz os blocos existentes e sua ordem; sugestões ainda não
-aplicadas ficam separadas nas notas de revisão ao final.
+O estado operacional da sincronização com o editor do Maze fica em
+`docs/AI_HANDOFF.md`; este plano é a referência da configuração-alvo e da ordem
+dos blocos.
 
 ## Objetivo
 
@@ -67,14 +69,7 @@ Com que frequência você acompanha o preço do Bitcoin ou de outras criptomoeda
 
 **Texto da tarefa**
 
-É a sua primeira vez no Draftea Pulse. Antes de fazer uma operação, descubra como
-ele funciona.
-
-Finalize a tarefa quando sentir que já entendeu o que precisa fazer.
-
-**Pergunta aberta**
-
-Com suas próprias palavras, como funciona uma rodada no Draftea Pulse?
+Você verá uma breve introdução ao Draftea Pulse. Leia e avance até finalizá-la.
 
 **Pergunta de múltipla escolha**
 
@@ -239,10 +234,10 @@ Agradecemos pelo seu tempo e pelos seus comentários.
 
 ---
 
-## Configuração observada no Maze
+## Configuração-alvo do estudo
 
 - O estudo permanece em rascunho.
-- A sequência acima contém 21 blocos entre as telas de boas-vindas e encerramento.
+- A sequência acima terá 20 blocos entre as telas de boas-vindas e encerramento.
 - Todas as escalas numéricas vão de 1 a 5; a matriz também tem cinco alternativas.
 - As perguntas de múltipla escolha usam seleção única e alternativas embaralhadas.
   A ordem das alternativas neste documento é a do editor, não necessariamente a
@@ -251,23 +246,24 @@ Agradecemos pelo seu tempo e pelos seus comentários.
 - As perguntas abertas finais sobre confusão, mudança prioritária e comentários
   adicionais são opcionais. As demais perguntas são obrigatórias.
 - Não há bloco de consentimento nem as antigas perguntas opcionais sobre inclusão
-  dos US$10, dúvidas durante a venda ou informações ausentes no histórico no
-  rascunho observado. Por isso, elas não integram o questionário acima.
+  dos US$10, dúvidas durante a venda ou informações ausentes no histórico. Por
+  isso, elas não integram o questionário acima.
 
-## Notas de revisão — separadas do questionário atual
+## Decisões de projeto registradas
 
-### Exploração livre na tarefa 1
+### Onboarding guiado na tarefa 1
 
-A instrução permite descobrir o funcionamento pela interface, FAQ ou onboarding.
-O encerramento configurado atualmente ocorre ao abrir a explicação pelo botão
-`?` e chegar ao final do onboarding, conforme confirmado pela pessoa responsável
-pelo estudo. Essa configuração foi mantida.
+No link inicial de participante da Tarefa 1, o bottom sheet abre já no primeiro
+card e registra `onboarding-open`. Assim a tarefa mede a compreensão da
+introdução, e não se a pessoa encontrou o ícone `?` na interface. O produto fora
+do estudo continua com o onboarding opcional.
 
-Uma exploração válida por outro caminho pode não cumprir esse critério técnico.
-Na análise, diferenciar conclusão do caminho esperado de compreensão do produto,
-usando também a resposta aberta sobre como funciona uma rodada. As perguntas
-sobre “Cómo funciona Draftea Pulse” continuam presumindo que a explicação foi
-vista; não foi aplicada uma condição para ocultá-las em outros caminhos.
+Somente `Entendido, empezar`, no quarto card, registra `onboarding-complete` e
+encerra a tarefa. Fechar pelo X, overlay ou Escape mantém a tarefa incompleta e
+permite reabrir o onboarding pelo ícone de ajuda. A pergunta aberta obrigatória
+foi removida para reduzir esforço logo no começo; após a introdução, a múltipla
+escolha mede compreensão e a escala mede a clareza percebida. As perguntas
+abertas opcionais do fim preservam o feedback qualitativo.
 
 ### Pergunta sobre UP em 67%
 

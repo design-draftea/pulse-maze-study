@@ -69,7 +69,11 @@ import {
 } from './services/prototypeWallet'
 import type { HelpAssistantActionId } from './services/helpAssistant'
 import { buildHelpAssistantSnapshot } from './services/helpAssistantSnapshot'
-import { getMazeStep, markMazeStep } from './services/mazeStep'
+import {
+  getMazeStep,
+  isMazeTask1OnboardingStart,
+  markMazeStep,
+} from './services/mazeStep'
 import { useSeededSellEntry } from './hooks/useSeededSellEntry'
 import './App.css'
 
@@ -143,7 +147,10 @@ function App() {
   const [isMarketHeaderCompact, setIsMarketHeaderCompact] = useState(false)
   const [isMarketHeaderPinned, setIsMarketHeaderPinned] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false)
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(() => (
+    isMazeTask1OnboardingStart(window.location.search)
+  ))
+  const hasStartedTask1Onboarding = useRef(false)
   const {
     isInviting: isOnboardingInviting,
     dismissInvite: dismissOnboardingInvite,
@@ -640,6 +647,14 @@ function App() {
     setIsOnboardingOpen(true)
   }, [dismissOnboardingInvite])
 
+  useEffect(() => {
+    if (hasStartedTask1Onboarding.current
+      || !isMazeTask1OnboardingStart(window.location.search)) return
+
+    hasStartedTask1Onboarding.current = true
+    handleOnboardingOpen()
+  }, [handleOnboardingOpen])
+
   const handleOnboardingComplete = useCallback(() => {
     markMazeStep('onboarding-complete')
   }, [])
@@ -659,6 +674,7 @@ function App() {
   }, [])
 
   const handleOnboardingClose = useCallback(() => {
+    // Sair não comprova compreensão: só o CTA final conclui a Tarefa 1.
     setIsOnboardingOpen(false)
   }, [])
 

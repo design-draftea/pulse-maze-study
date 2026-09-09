@@ -72,7 +72,9 @@ export function OnboardingBottomSheet({
   onClose,
   onComplete,
 }: OnboardingBottomSheetProps) {
-  const [shouldRender, setShouldRender] = useState(false)
+  // Na Tarefa 1, o sheet já vem aberto: montá-lo nesta primeira pintura evita
+  // mostrar a Home vazia antes da introdução.
+  const [shouldRender, setShouldRender] = useState(isOpen)
   const [isClosing, setIsClosing] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
   // O passo que está saindo e a direção da troca. Só existem durante os 300ms
