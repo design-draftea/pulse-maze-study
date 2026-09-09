@@ -26,7 +26,7 @@ export const onboardingSteps: OnboardingStep[] = [
   {
     id: 'price',
     title: 'El % indica el precio',
-    body: 'Con $10 a 67¢ recibes 14.93 participaciones. Si aciertas, cada una paga $1.',
+    body: 'Con $10 a 67¢ recibes 14.93 participaciones. Si aciertas, recibes $1 por cada participación.',
   },
   {
     id: 'sell',
