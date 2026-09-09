@@ -14,13 +14,13 @@ entendem depois de usar. A sessão moderada mede **por quê**: qual modelo menta
 pessoa traz, que vocabulário usa, o que ela espera antes de tocar na tela e o que
 a faria — ou não — colocar dinheiro real ali.
 
-Por isso as quatro tarefas permanecem as mesmas, e quase todas as perguntas
-mudam de forma.
+Por isso as tarefas permanecem as mesmas — com uma exceção deliberada na tarefa
+1 —, e quase todas as perguntas mudam de forma.
 
 | | Maze (não moderado) | Sessão moderada |
 |---|---|---|
-| Tarefas 1 a 4 | iguais | **iguais** |
-| Tarefa 1 | introdução abre sozinha | **igual**, com a descoberta observada antes |
+| Tarefas 2 a 4 | iguais | **iguais** |
+| Tarefa 1 | introdução abre sozinha pelo link | **descoberta livre**, com a intenção perguntada antes |
 | Pergunta aberta "como funciona uma rodada" | saiu do Maze | **fica**, é a âncora da entrevista |
 | Múltipla escolha de compreensão | mede acerto | vira **pergunta aberta com sonda** |
 | Escalas 1–5 | dado quantitativo | **uma por tarefa**, só para puxar o "por quê" |
@@ -44,21 +44,23 @@ mais do que quatro opções, e ainda revela a palavra que a pessoa usa.
 participantes não produzem número utilizável. O mesmo tempo, gasto pedindo que a
 pessoa explique o produto para um amigo imaginário, mede compreensão melhor.
 
-**Por que a tarefa 1 mudou nos dois estudos.** O link inicial da tarefa 1 no
-Maze passou a abrir a introdução automaticamente (`?task=onboarding`), e a
-pergunta aberta sobre como funciona uma rodada saiu de lá. A tarefa agora mede a
-compreensão da introdução, não se a pessoa acha o ícone `?`.
+**Por que a tarefa 1 é a única que diverge.** No Maze, o link inicial passou a
+abrir a introdução automaticamente (`?task=onboarding`) e a pergunta aberta sobre
+como funciona uma rodada saiu. Faz sentido lá: sem moderador, não dá para saber
+por que alguém não achou o ícone `?`, e texto livre rende pouco.
 
-A sessão moderada acompanha essa decisão — usa o mesmo link, para que as duas
-tarefas continuem comparáveis — mas recupera as duas coisas que o Maze abriu mão
-de medir, sem contaminar a tarefa:
+Na sessão moderada a decisão se inverte, porque as duas limitações desaparecem:
 
-- **a descoberta** vai para o bloco de primeira impressão, antes de qualquer
-  tarefa, como uma pergunta de intenção: "o que você faria para entender isso
-  melhor?";
-- **a pergunta aberta** volta como âncora da entrevista. Texto livre rende pouco
-  sem moderador, e por isso saiu do Maze; com moderador é a pergunta que mais
-  rende da sessão inteira.
+- **a descoberta é observável.** Ver a pessoa procurar — e falhar — é o achado
+  mais barato da sessão. Abrir a introdução pelo link jogaria fora exatamente o
+  que só a moderação permite ver.
+- **a pergunta aberta rende.** Com moderador e sonda, "como funciona uma rodada"
+  é a pergunta que mais rende da sessão inteira.
+
+O custo é que a tarefa 1 deixa de ser comparável com a do Maze. É um custo
+aceitável: as tarefas 2, 3 e 4 continuam idênticas e sustentam o cruzamento, e a
+tarefa 1 moderada mede algo que o Maze deixou de medir em vez de repetir o que
+ele já mede.
 
 ## Formato
 
@@ -93,12 +95,14 @@ no recrutamento**, não perguntas de sessão.
 
 ## Preparação do protótipo
 
-- **Primeira impressão e tarefas 2 a 4:** use a URL simples, sem parâmetros —
+- **Sessão inteira, incluindo a tarefa 1:** use a URL simples, sem parâmetros —
   `https://design-draftea.github.io/pulse-maze-study/`. Os endereços com
   `mazeStep` existem para o Maze fechar tarefas e não têm função aqui.
-- **Tarefa 1:** use `https://design-draftea.github.io/pulse-maze-study/?task=onboarding`,
-  o mesmo link do Maze. Ele abre a introdução já no primeiro card. Sem esse
-  parâmetro a pessoa cai na Home e a tarefa vira outra coisa.
+- **Tenha `?task=onboarding` à mão como rede de segurança.** Esse é o link da
+  tarefa 1 no Maze: abre a introdução já no primeiro card. Use **só** se a pessoa
+  não encontrar a explicação sozinha depois de uns três minutos — sem ela ver a
+  introdução, as sondas de compreensão perdem o objeto. Registre que foi
+  entregue: é resultado, não acidente de condução.
 - **A rodada vira a cada 15 minutos.** Comece a tarefa de compra logo depois de
   uma virada, para ter folga. Se a rodada virar com o betslip aberto, ele fecha:
   não é defeito, é o produto protegendo a cotação. Peça para refazer e registre
@@ -142,8 +146,8 @@ silêncio de três segundos, que costuma render mais que qualquer pergunta.
 
 ### 3. Primeira impressão, sem tarefa — 5 min
 
-Peça para abrir o link **sem parâmetro** — a Home — e **não faça nenhuma
-pergunta durante 30 segundos**. Depois:
+Peça para abrir o link e **não faça nenhuma pergunta durante 30 segundos**.
+Depois:
 
 - O que é isso, na sua opinião?
 - Para que serve? Quem usaria?
@@ -152,22 +156,31 @@ pergunta durante 30 segundos**. Depois:
 - O que é esse "Precio objetivo"?
 - E esses percentuais em UP e DOWN, o que eles querem dizer?
 - **Se você quisesse entender melhor como isso funciona, o que você faria?**
-  *(deixe apontar na tela; não peça para clicar)*
+  *(deixe apontar na tela; peça para não clicar ainda)*
 
-Esse bloco não existe no Maze e é o que dá o modelo mental cru, antes de a
-introdução ensinar qualquer coisa. A última pergunta é a que recupera a
-descoberta: desde que o link da tarefa 1 abre a introdução sozinho, é aqui que
-se vê se a pessoa encontraria o caminho por conta própria.
+Esse bloco não existe no Maze e é o que dá o modelo mental cru, antes de
+qualquer explicação. A última pergunta captura a **intenção**; a tarefa seguinte
+mostra o **comportamento**. A distância entre as duas é dado: gente que aponta
+o ícone certo e depois procura em outro lugar diz mais do que qualquer uma das
+duas respostas isolada.
 
-### 4. Tarefa 1 — a introdução — 8 min
+### 4. Tarefa 1 — descobrir como funciona — 8 min
 
-Envie o link com `?task=onboarding`. A introdução abre sozinha no primeiro card.
+> É a sua primeira vez no Draftea Pulse. Antes de fazer uma operação, descubra
+> como ele funciona. Me avise quando sentir que entendeu.
 
-> Você verá uma breve introdução ao Draftea Pulse. Leia e avance até
-> finalizá-la.
+**Este é o bloco de observação mais denso da sessão.** Não ajude, não confirme,
+não olhe para o lugar certo. Registre:
 
-Enquanto ela avança, observe o ritmo: onde volta, onde passa rápido, onde
-franze a testa. Não interrompa.
+- por onde ela vai primeiro — o ícone `?`, o FAQ no rodapé, os cards da Home, ou
+  nenhum deles;
+- quanto tempo até encontrar a explicação, ou até desistir;
+- se o que ela faz bate com o que disse que faria no bloco anterior;
+- se ela lê a introdução inteira ou pula cards.
+
+Se passarem uns três minutos sem encontrar, entregue o link `?task=onboarding` —
+"achei aqui, dá uma olhada" — e **anote que foi entregue**. Sem ver a introdução
+as sondas seguintes não têm objeto, mas o fato de não ter encontrado é o achado.
 
 Depois:
 
@@ -177,8 +190,8 @@ Depois:
   travar, pergunte o que era o "67¢" que aparecia junto)*
 - Teve algum card que você leu duas vezes?
 - Teve alguma palavra ali que você não usaria?
-- **Escala 1 a 5:** quanto essa introdução ajudou? E por que esse número?
-- Se ela não tivesse aparecido, você teria procurado por ela?
+- **Escala 1 a 5:** quanto essa explicação ajudou? E por que esse número?
+- O que faltou nela?
 
 ### 5. Tarefa 2 — compra — 8 min
 
@@ -273,8 +286,11 @@ Agradeça, explique o próximo passo do produto e encerre.
   com o ganho. A sessão explica **o que** na tela produz a confusão.
 - A pergunta aberta sobre como funciona uma rodada **só existe aqui**, desde que
   saiu do Maze. É a única leitura direta do modelo mental que o estudo terá.
-- A intenção de descoberta — se a pessoa procuraria a explicação sozinha — também
-  **só existe aqui**, desde que o link da tarefa 1 passou a abri-la.
+- A descoberta da explicação — se a pessoa a encontra sozinha, e por onde — também
+  **só existe aqui**, desde que o link da tarefa 1 no Maze passou a abri-la.
+- A tarefa 1 dos dois estudos **não é comparável**, e isso é deliberado. A escala
+  de clareza do Maze mede a introdução para quem foi levado até ela; a daqui mede
+  para quem a procurou. Não some as duas.
 - A alternativa `Movimientos` na tarefa 4 do Maze mede **quantos** procuram no
   lugar errado. A pergunta de expectativa aqui explica **o que** eles esperavam
   encontrar em cada seção.
