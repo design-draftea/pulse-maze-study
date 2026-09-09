@@ -20,6 +20,8 @@ mudam de forma.
 | | Maze (não moderado) | Sessão moderada |
 |---|---|---|
 | Tarefas 1 a 4 | iguais | **iguais** |
+| Tarefa 1 | introdução abre sozinha | **igual**, com a descoberta observada antes |
+| Pergunta aberta "como funciona uma rodada" | saiu do Maze | **fica**, é a âncora da entrevista |
 | Múltipla escolha de compreensão | mede acerto | vira **pergunta aberta com sonda** |
 | Escalas 1–5 | dado quantitativo | **uma por tarefa**, só para puxar o "por quê" |
 | Matriz final de concordância | 5 afirmações | **sai**; vira "explique o produto para mim" |
@@ -41,6 +43,22 @@ mais do que quatro opções, e ainda revela a palavra que a pessoa usa.
 **Por que tirar a matriz final.** Cinco afirmações em escala com seis
 participantes não produzem número utilizável. O mesmo tempo, gasto pedindo que a
 pessoa explique o produto para um amigo imaginário, mede compreensão melhor.
+
+**Por que a tarefa 1 mudou nos dois estudos.** O link inicial da tarefa 1 no
+Maze passou a abrir a introdução automaticamente (`?task=onboarding`), e a
+pergunta aberta sobre como funciona uma rodada saiu de lá. A tarefa agora mede a
+compreensão da introdução, não se a pessoa acha o ícone `?`.
+
+A sessão moderada acompanha essa decisão — usa o mesmo link, para que as duas
+tarefas continuem comparáveis — mas recupera as duas coisas que o Maze abriu mão
+de medir, sem contaminar a tarefa:
+
+- **a descoberta** vai para o bloco de primeira impressão, antes de qualquer
+  tarefa, como uma pergunta de intenção: "o que você faria para entender isso
+  melhor?";
+- **a pergunta aberta** volta como âncora da entrevista. Texto livre rende pouco
+  sem moderador, e por isso saiu do Maze; com moderador é a pergunta que mais
+  rende da sessão inteira.
 
 ## Formato
 
@@ -75,9 +93,12 @@ no recrutamento**, não perguntas de sessão.
 
 ## Preparação do protótipo
 
-- Use a URL simples, sem parâmetros: `https://design-draftea.github.io/pulse-maze-study/`.
-  Os endereços com `mazeStep` existem para o Maze fechar tarefas e não têm
-  função aqui.
+- **Primeira impressão e tarefas 2 a 4:** use a URL simples, sem parâmetros —
+  `https://design-draftea.github.io/pulse-maze-study/`. Os endereços com
+  `mazeStep` existem para o Maze fechar tarefas e não têm função aqui.
+- **Tarefa 1:** use `https://design-draftea.github.io/pulse-maze-study/?task=onboarding`,
+  o mesmo link do Maze. Ele abre a introdução já no primeiro card. Sem esse
+  parâmetro a pessoa cai na Home e a tarefa vira outra coisa.
 - **A rodada vira a cada 15 minutos.** Comece a tarefa de compra logo depois de
   uma virada, para ter folga. Se a rodada virar com o betslip aberto, ele fecha:
   não é defeito, é o produto protegendo a cotação. Peça para refazer e registre
@@ -121,8 +142,8 @@ silêncio de três segundos, que costuma render mais que qualquer pergunta.
 
 ### 3. Primeira impressão, sem tarefa — 5 min
 
-Peça para abrir o link e **não faça nenhuma pergunta durante 30 segundos**.
-Depois:
+Peça para abrir o link **sem parâmetro** — a Home — e **não faça nenhuma
+pergunta durante 30 segundos**. Depois:
 
 - O que é isso, na sua opinião?
 - Para que serve? Quem usaria?
@@ -130,25 +151,34 @@ Depois:
 - Tem alguma coisa nessa tela que você não entendeu?
 - O que é esse "Precio objetivo"?
 - E esses percentuais em UP e DOWN, o que eles querem dizer?
+- **Se você quisesse entender melhor como isso funciona, o que você faria?**
+  *(deixe apontar na tela; não peça para clicar)*
 
-Esse bloco não existe no Maze e é o que dá o modelo mental cru, antes de o
-onboarding ensinar qualquer coisa.
+Esse bloco não existe no Maze e é o que dá o modelo mental cru, antes de a
+introdução ensinar qualquer coisa. A última pergunta é a que recupera a
+descoberta: desde que o link da tarefa 1 abre a introdução sozinho, é aqui que
+se vê se a pessoa encontraria o caminho por conta própria.
 
-### 4. Tarefa 1 — descobrir como funciona — 8 min
+### 4. Tarefa 1 — a introdução — 8 min
 
-> É a sua primeira vez no Draftea Pulse. Antes de fazer uma operação, descubra
-> como ele funciona. Me avise quando sentir que entendeu.
+Envie o link com `?task=onboarding`. A introdução abre sozinha no primeiro card.
 
-Observe **por onde ela vai** — o botão de interrogação, o FAQ, ou nenhum dos
-dois. No Maze essa escolha fica invisível.
+> Você verá uma breve introdução ao Draftea Pulse. Leia e avance até
+> finalizá-la.
+
+Enquanto ela avança, observe o ritmo: onde volta, onde passa rápido, onde
+franze a testa. Não interrompa.
 
 Depois:
 
-- Com suas palavras, como funciona uma rodada?
+- **Com suas palavras, como funciona uma rodada?** *(pergunta âncora — deixe
+  responder inteiro antes de qualquer sonda)*
 - Na explicação, UP aparecia em 67%. O que isso significava? *(aberta; se
   travar, pergunte o que era o "67¢" que aparecia junto)*
-- Teve alguma tela dessa explicação que você leu duas vezes?
-- **Escala 1 a 5:** quanto essa explicação ajudou? E por que esse número?
+- Teve algum card que você leu duas vezes?
+- Teve alguma palavra ali que você não usaria?
+- **Escala 1 a 5:** quanto essa introdução ajudou? E por que esse número?
+- Se ela não tivesse aparecido, você teria procurado por ela?
 
 ### 5. Tarefa 2 — compra — 8 min
 
@@ -241,6 +271,10 @@ Agradeça, explique o próximo passo do produto e encerre.
 
 - A pergunta de `Ganancia potencial` no Maze mede **quantos** confundem o total
   com o ganho. A sessão explica **o que** na tela produz a confusão.
+- A pergunta aberta sobre como funciona uma rodada **só existe aqui**, desde que
+  saiu do Maze. É a única leitura direta do modelo mental que o estudo terá.
+- A intenção de descoberta — se a pessoa procuraria a explicação sozinha — também
+  **só existe aqui**, desde que o link da tarefa 1 passou a abri-la.
 - A alternativa `Movimientos` na tarefa 4 do Maze mede **quantos** procuram no
   lugar errado. A pergunta de expectativa aqui explica **o que** eles esperavam
   encontrar em cada seção.
