@@ -37,9 +37,10 @@ const readCssNumber = (styles: CSSStyleDeclaration, name: string) =>
  * O estado base é a conta inteira visível com os valores finais, que é o quadro
  * do Figma.
  *
- * Com `prefers-reduced-motion` a animação continua em loop, só sem movimento —
- * ver `--onboarding-motion` no `OnboardingBottomSheet.css`. A contagem também
- * segue: número mudando é texto mudando, não deslocamento.
+ * A derivação roda uma vez e para na conta inteira, que é esse mesmo estado
+ * base. Com `prefers-reduced-motion` ela continua acontecendo, só sem
+ * movimento — ver `--onboarding-motion` no `OnboardingBottomSheet.css`. A
+ * contagem também segue: número mudando é texto mudando, não deslocamento.
  */
 export function OnboardingSharePrice() {
   const cardRef = useRef<HTMLDivElement>(null)
@@ -69,7 +70,9 @@ export function OnboardingSharePrice() {
       // A fase vem do relógio da própria animação CSS, não de
       // `performance.now()`. O Chrome congela animações de página não
       // renderizada, então um relógio próprio dessincronizaria da ilustração
-      // toda vez que a aba fosse para o fundo.
+      // toda vez que a aba fosse para o fundo. Terminada a animação, esse
+      // relógio para no ponto de parada, bem depois da janela da contagem, e o
+      // número descansa no valor final.
       const clock = card
         .getAnimations({ subtree: true })
         .find((animation) => 'animationName' in animation

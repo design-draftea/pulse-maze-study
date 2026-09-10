@@ -1,8 +1,9 @@
 /* `cardAnimado` do passo 4 (564:7089). Mesma arquitetura dos outros: o estado
    base é o quadro parado do Figma e as animações só o sobrescrevem.
 
-   `prefers-reduced-motion` não para a animação: ela perde o movimento pelo
-   `--onboarding-motion` do sheet e segue em loop. */
+   A rodada acontece uma vez: a série é traçada, a venda congela a ilustração no
+   instante dela e o card fica nesse quadro. `prefers-reduced-motion` não muda
+   isso: ela só tira o movimento pelo `--onboarding-motion` do sheet. */
 .onboarding-sell {
   --onboarding-sell-inset: 32px;
   --onboarding-sell-span: calc(100% - (var(--onboarding-sell-inset) * 2));
@@ -15,6 +16,12 @@
   --onboarding-series-top: 30px;
   --onboarding-series-height: 74px;
   --onboarding-series-duration: var(--onboarding-sell-duration);
+
+  /* Onde o ciclo da série pararia, em frações dele — o mesmo 0,88 do card 1.
+     Aqui ele quase nunca é alcançado: a venda automática acontece em 0,48 e
+     congela a série por `animation-play-state`. Ele existe para o caso de a
+     venda não acontecer, e para a série ter sempre um fim. */
+  --onboarding-series-hold: 0.88;
 
   position: relative;
   display: flex;
@@ -266,8 +273,9 @@
    ser `potencial` e a linha marca o momento. É o texto do card virando gesto —
    você vende ao valor do momento, sem esperar o fim da rodada.
 
-   O congelamento é `animation-play-state`, então a animação retoma exatamente
-   de onde parou quando o estado volta. */
+   O congelamento é `animation-play-state`, e a venda não é desfeita: o card
+   fica nesse quadro até ser remontado, o que acontece ao reabrir o onboarding
+   ou ao voltar a este passo. */
 .onboarding-sell--sold .onboarding-series,
 .onboarding-sell--sold .onboarding-series__marker {
   animation-play-state: paused;

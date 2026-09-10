@@ -2,8 +2,9 @@
    Figma; as animações no fim do arquivo só sobrescrevem esse estado. É isso que
    mantém a geometria reservada, sem salto de layout.
 
-   `prefers-reduced-motion` não para a animação: ela perde o movimento pelo
-   `--onboarding-motion` e segue em loop. Ver o comentário no fim do arquivo.
+   A animação roda uma vez e para no quadro cheio, que é justamente o estado
+   base. `prefers-reduced-motion` não a interrompe: ela só perde o movimento
+   pelo `--onboarding-motion`. Ver o comentário no fim do arquivo.
 
    O Figma posiciona em px sobre uma tela de 375, onde o vão útil do card mede
    279px. Como o protótipo vai até 499px, as posições horizontais viram frações
@@ -14,6 +15,12 @@
   --onboarding-chart-span: calc(100% - (var(--onboarding-chart-inset) * 2));
   --onboarding-chart-duration: 5.2s;
 
+  /* Onde o ciclo para, em frações dele. As keyframes continuam descrevendo o
+     ciclo inteiro, mas os 12% finais eram só a dissolvência que emendava o
+     loop: em 88% a escolha está acesa, a série inteira desenhada e a pílula do
+     resultado no lugar, e é esse quadro que `forwards` mantém. */
+  --onboarding-chart-hold: 0.88;
+
   /* Geometria da série compartilhada (`OnboardingSeries`): o card 1 desenha
      numa caixa de 115px a partir de `top: 1px`. */
   --onboarding-series-inset: var(--onboarding-chart-inset);
@@ -21,6 +28,7 @@
   --onboarding-series-top: 1px;
   --onboarding-series-height: 115px;
   --onboarding-series-duration: var(--onboarding-chart-duration);
+  --onboarding-series-hold: var(--onboarding-chart-hold);
 
   position: relative;
   display: flex;
@@ -84,7 +92,7 @@
   );
   opacity: 0;
   animation: onboarding-chart-crossing var(--onboarding-chart-duration)
-    ease-out infinite;
+    ease-out var(--onboarding-chart-hold) forwards;
 }
 
 .onboarding-chart__target-label {
@@ -118,7 +126,7 @@
   );
   transform-origin: right center;
   animation: onboarding-chart-final-line var(--onboarding-chart-duration)
-    ease-in-out infinite;
+    ease-in-out var(--onboarding-chart-hold) forwards;
 }
 
 /* `valor` (564:6909): ancorada pela borda direita, 8px antes da bolinha, que é
@@ -150,7 +158,7 @@
   line-height: 16.464px;
   white-space: nowrap;
   animation: onboarding-chart-pill var(--onboarding-chart-duration)
-    ease-in-out infinite;
+    ease-in-out var(--onboarding-chart-hold) forwards;
 }
 
 /* `btn` (564:6915) */
@@ -192,7 +200,7 @@
 .onboarding-chart__choice--up {
   background: var(--color-fill-success);
   animation: onboarding-chart-choice-up var(--onboarding-chart-duration)
-    ease-in-out infinite;
+    ease-in-out var(--onboarding-chart-hold) forwards;
 }
 
 .onboarding-chart__choice--down {
@@ -215,9 +223,10 @@
 }
 
 /* A escolha acende primeiro, porque é o que o texto do card promete; só depois
-   o preço se desenha e o resultado aparece. O quadro final é segurado por
-   ~1,3s antes do loop — o olho precisa de um quadro parado para ler o
-   conceito. */
+   o preço se desenha e o resultado aparece. O quadro cheio chega em 88% e é
+   onde a animação para — o olho precisa de um quadro parado para ler o
+   conceito, e agora ele fica. Os passos de 97% e 100% descrevem a dissolvência
+   que emendava o loop e não são mais alcançados. */
 @keyframes onboarding-chart-choice-up {
   0% {
     opacity: 0.4;
@@ -298,8 +307,8 @@
   }
 }
 
-/* Sem bloco de `prefers-reduced-motion` para o resto, de propósito: o movimento sai pelo
-   `--onboarding-motion`, definido no sheet, e o loop continua. Com a variável
-   em zero o recorte da série nasce aberto e ela aparece inteira em vez de ser
-   varrida, e a pílula, o ponto e a linha do resultado entram só por opacidade,
-   sem escala. */
+/* Sem bloco de `prefers-reduced-motion` para o resto, de propósito: o movimento
+   sai pelo `--onboarding-motion`, definido no sheet. Com a variável em zero o
+   recorte da série nasce aberto e ela aparece inteira em vez de ser varrida, e
+   a pílula, o ponto e a linha do resultado entram só por opacidade, sem
+   escala. */

@@ -4,6 +4,14 @@
    - `--onboarding-series-inset` e `-span`: os recuos laterais
    - `--onboarding-series-top` e `-height`: a caixa vertical
    - `--onboarding-series-duration`: a duração do ciclo do card
+   - `--onboarding-series-hold`: onde o ciclo para, em frações dele
+
+   O ciclo roda uma vez só e para no quadro cheio. As keyframes continuam
+   descrevendo o ciclo inteiro, dissolvência final incluída, mas
+   `--onboarding-series-hold` encerra a animação antes dela: em 0,88 a série já
+   está inteira desenhada e o marcador já chegou ao fim, e é esse quadro que
+   `forwards` mantém. A cauda existia só para emendar o loop, e sobrevive nas
+   keyframes para o ciclo continuar legível como um ciclo.
 
    A série em si é `onboardingChartSeries.svg`: 26 pontos de âncora suavizados
    com a mesma fórmula do gráfico real do app — Béziers cúbicas com alças
@@ -27,7 +35,7 @@
   /* `linear` de propósito: a varredura representa o tempo da rodada avançando,
      e velocidade constante é o que lê certo. */
   animation: onboarding-series-sweep var(--onboarding-series-duration) linear
-    infinite;
+    var(--onboarding-series-hold) forwards;
 }
 
 /* A largura é declarada em vez de deduzida de `left` + `right`: `<img>` é
@@ -68,9 +76,10 @@
   border-radius: 50%;
   background: rgb(251 251 251 / 0.08);
   animation:
-    onboarding-series-marker var(--onboarding-series-duration) linear infinite,
+    onboarding-series-marker var(--onboarding-series-duration) linear
+      var(--onboarding-series-hold) forwards,
     onboarding-series-marker-fade var(--onboarding-series-duration) ease-in-out
-      infinite;
+      var(--onboarding-series-hold) forwards;
 }
 
 .onboarding-series__marker::before,
@@ -408,9 +417,9 @@
   );
   animation:
     onboarding-series-marker-falling var(--onboarding-series-duration) linear
-      infinite,
+      var(--onboarding-series-hold) forwards,
     onboarding-series-marker-fade var(--onboarding-series-duration) ease-in-out
-      infinite;
+      var(--onboarding-series-hold) forwards;
 }
 
 @keyframes onboarding-series-marker-falling {
@@ -713,6 +722,6 @@
   .onboarding-series__marker,
   .onboarding-series__marker--falling {
     animation: onboarding-series-marker-fade var(--onboarding-series-duration)
-      ease-in-out infinite;
+      ease-in-out var(--onboarding-series-hold) forwards;
   }
 }

@@ -2,12 +2,13 @@
    base do CSS é o quadro parado e as animações só o sobrescrevem, o que reserva
    a geometria.
 
-   `prefers-reduced-motion` não para a animação: ela perde o movimento pelo
-   `--onboarding-motion` e segue em loop. Ver o comentário no fim do arquivo.
+   A animação roda uma vez e para no quadro resolvido.
+   `prefers-reduced-motion` não a interrompe: ela só perde o movimento pelo
+   `--onboarding-motion`. Ver o comentário no fim do arquivo.
 
-   Aqui o quadro base é o **resolvido** (00:00, barra cheia, `Precio final`,
-   pílula visível), não o do Figma — o do Figma é um instante do meio da
-   contagem, com o relógio em 00:05 e a barra em 48%.
+   Aqui o quadro base é o **resolvido** (00:00, barra cheia e visível,
+   `Precio final`, pílula visível), não o do Figma — o do Figma é um instante do
+   meio da contagem, com o relógio em 00:05 e a barra em 48%.
 
    O Figma posiciona em px sobre uma tela de 375, onde o vão do card mede 279px;
    as medidas horizontais viram frações desse vão para acompanhar a largura. */
@@ -16,9 +17,11 @@
   --onboarding-clock-span: calc(100% - (var(--onboarding-clock-inset) * 2));
   --onboarding-clock-duration: 5.2s;
 
-  /* Uma volta dura 5,2s como o card 1; o ciclo completo são duas, porque a
-     primeira fecha acima do objetivo e a segunda abaixo. */
-  --onboarding-clock-cycle: calc(var(--onboarding-clock-duration) * 2);
+  /* Onde o ciclo para, em frações dele. As keyframes continuam descrevendo o
+     ciclo inteiro, mas os 12% finais eram só a dissolvência que emendava o
+     loop: em 88% o relógio já zerou, a barra está cheia e `Terminó arriba` já
+     está no lugar, e é esse quadro que `forwards` mantém. */
+  --onboarding-clock-hold: 0.88;
 
   position: relative;
   display: flex;
@@ -154,7 +157,7 @@
   height: var(--onboarding-clock-slot);
   overflow: hidden;
   animation: onboarding-clock-transient var(--onboarding-clock-duration)
-    ease-in-out infinite;
+    ease-in-out var(--onboarding-clock-hold) forwards;
 }
 
 .onboarding-clock__odometer--seconds {
@@ -179,7 +182,7 @@
   /* Base: o último passo, 00:00. */
   transform: translateY(calc(var(--onboarding-clock-slot) * -5));
   animation: onboarding-clock-odometer var(--onboarding-clock-duration)
-    steps(6, jump-none) infinite;
+    steps(6, jump-none) var(--onboarding-clock-hold) forwards;
 }
 
 .onboarding-clock__strip > * {
@@ -187,18 +190,23 @@
   flex: 0 0 var(--onboarding-clock-slot);
 }
 
-/* `barra` (570:7243). A linha inteira sai de cena quando o relógio zera —
-   trilha incluída —, senão a pílula fica em cima de uma barra ainda visível.
-   Base em `opacity: 0` porque o quadro base é o resolvido, já com a pílula. */
+/* `barra` (570:7243). A barra enche e fica: ela é a prova de que a rodada
+   correu inteira, e some-la deixava a lição pela metade. Ela continua centrada
+   na faixa livre entre o cabeçalho (48px) e os preços (98px), no mesmo 71px do
+   Figma, e a pílula do resultado passa a flutuar por cima dela — a pílula tem
+   110px e a barra 323px, então o preenchimento continua aparecendo dos dois
+   lados.
+
+   Base em `opacity: 1` porque o quadro base é o resolvido, e nele a barra está
+   cheia e visível. */
 .onboarding-clock__bar {
   position: absolute;
   top: 71px;
   left: var(--onboarding-clock-inset);
   width: var(--onboarding-clock-span);
   height: 4px;
-  opacity: 0;
   animation: onboarding-clock-bar-row var(--onboarding-clock-duration)
-    ease-in-out infinite;
+    ease-in-out var(--onboarding-clock-hold) forwards;
 }
 
 .onboarding-clock__bar-track {
@@ -223,39 +231,35 @@
     var(--color-action-primary-default-end) 100%
   );
   animation: onboarding-clock-bar var(--onboarding-clock-duration) linear
-    infinite;
+    var(--onboarding-clock-hold) forwards;
 }
 
 @keyframes onboarding-clock-bar-row {
   /* Entra por dissolvência nos mesmos 6% do `onboarding-clock-transient`, que é
-     o que os valores do card já usam. Antes ela nascia em `opacity: 1` e
-     aparecia seca na virada do loop, enquanto o resto entrava suave. */
+     o que os valores do card já usam, e daí em diante permanece. */
   0% {
     opacity: 0;
   }
 
   6%,
-  58% {
-    opacity: 1;
-  }
-
-  66%,
   100% {
-    opacity: 0;
+    opacity: 1;
   }
 }
 
-/* A pílula ocupa o lugar da barra quando o relógio zera: o que estava contando
-   passa a anunciar, e não precisa de espaço novo. Centrada na mesma linha da
-   barra — centro dela em 73px, metade da altura da pílula acima disso.
+/* A pílula anuncia o resultado flutuando sobre a barra cheia, centrada na mesma
+   linha dela — centro em 73px, metade da altura da pílula acima disso, que é a
+   posição do Figma. Ela vem depois da barra no DOM, então pinta por cima sem
+   precisar de `z-index`; o fundo opaco dela é o que cria a sensação de estar
+   pousada ali.
 
    O visual repete `.onboarding-chart__pill` do card 1 de propósito, para os
    cards lerem como um sistema. Quando os cards 3 e 4 chegarem e se algum reusar
    isto de novo, vale extrair numa classe compartilhada; com dois usos, duplicar
    custa menos que mexer no card 1 já validado. */
-/* O slot cuida da posição e de qual volta está em cena; a pílula cuida só do
-   próprio visual e da própria entrada. Separar isso evita duas animações
-   disputando `opacity` no mesmo elemento. */
+/* O slot cuida da posição; a pílula cuida só do próprio visual e da própria
+   entrada. Separar isso evita duas animações disputando `opacity` no mesmo
+   elemento. */
 .onboarding-clock__outcome-slot {
   position: absolute;
   top: 64.77px;
@@ -276,34 +280,7 @@
   line-height: 16.464px;
   white-space: nowrap;
   animation: onboarding-clock-outcome var(--onboarding-clock-duration)
-    ease-in-out infinite;
-}
-
-/* Vermelho de baixa, a mesma linguagem do DOWN no resto do app. */
-.onboarding-clock__outcome--down {
-  background: var(--color-fill-error);
-}
-
-/* As duas voltas ocupam a mesma célula do grid, então a caixa mede a maior das
-   duas e a troca não empurra nada de lado. A troca acontece exatamente na
-   virada de cada volta, quando o conteúdo já está invisível pelo desaparecer
-   de `onboarding-clock-transient` — então ela não é vista. */
-.onboarding-clock__runs {
-  display: grid;
-}
-
-.onboarding-clock__runs > * {
-  grid-area: 1 / 1;
-}
-
-.onboarding-clock__run--a {
-  opacity: 1;
-  animation: onboarding-clock-run-a var(--onboarding-clock-cycle) linear infinite;
-}
-
-.onboarding-clock__run--b {
-  opacity: 0;
-  animation: onboarding-clock-run-b var(--onboarding-clock-cycle) linear infinite;
+    ease-in-out var(--onboarding-clock-hold) forwards;
 }
 
 /* `precos` (570:7224) */
@@ -368,7 +345,7 @@
 .onboarding-clock__price-label-swap {
   display: grid;
   animation: onboarding-clock-transient var(--onboarding-clock-duration)
-    ease-in-out infinite;
+    ease-in-out var(--onboarding-clock-hold) forwards;
 }
 
 .onboarding-clock__price-label-swap > * {
@@ -378,13 +355,13 @@
 .onboarding-clock__price-label--now {
   opacity: 0;
   animation: onboarding-clock-label-now var(--onboarding-clock-duration)
-    ease-in-out infinite;
+    ease-in-out var(--onboarding-clock-hold) forwards;
 }
 
 .onboarding-clock__price-label--final {
   opacity: 1;
   animation: onboarding-clock-label-final var(--onboarding-clock-duration)
-    ease-in-out infinite;
+    ease-in-out var(--onboarding-clock-hold) forwards;
 }
 
 .onboarding-clock__delta {
@@ -434,8 +411,9 @@
   }
 }
 
-/* Os valores que mudam desaparecem antes da virada do loop e voltam depois: é
-   enquanto estão invisíveis que o odômetro salta de 00 de volta para 05. */
+/* Os valores que mudam desapareciam antes da virada do loop: é enquanto estão
+   invisíveis que o odômetro saltava de 00 de volta para 05. A animação para em
+   88%, então essa cauda não chega mais a rodar. */
 @keyframes onboarding-clock-transient {
   0% {
     opacity: 0;
@@ -484,30 +462,6 @@
   }
 }
 
-@keyframes onboarding-clock-run-a {
-  0%,
-  49.999% {
-    opacity: 1;
-  }
-
-  50%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes onboarding-clock-run-b {
-  0%,
-  49.999% {
-    opacity: 0;
-  }
-
-  50%,
-  100% {
-    opacity: 1;
-  }
-}
-
 @keyframes onboarding-clock-label-now {
   0%,
   58% {
@@ -533,7 +487,7 @@
 }
 
 /* Sem bloco de `prefers-reduced-motion` aqui de propósito: o movimento sai pelo
-   `--onboarding-motion` do sheet e o loop continua. Os odômetros seguem rodando
-   mesmo com a variável em zero, porque `steps()` troca os dígitos de uma vez —
-   é texto mudando, não deslocamento. A barra de progresso também fica: barra
-   enchendo é o mesmo padrão de qualquer carregamento. */
+   `--onboarding-motion` do sheet. Os odômetros seguem rodando mesmo com a
+   variável em zero, porque `steps()` troca os dígitos de uma vez — é texto
+   mudando, não deslocamento. A barra de progresso também fica: barra enchendo é
+   o mesmo padrão de qualquer carregamento. */

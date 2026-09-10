@@ -2,8 +2,9 @@
    estado base é o quadro parado do Figma — a conta inteira visível — e as
    animações só o sobrescrevem, o que reserva a geometria.
 
-   `prefers-reduced-motion` não para a animação: ela perde o movimento pelo
-   `--onboarding-motion` e segue em loop. Ver o comentário no fim do arquivo.
+   A animação roda uma vez e para na conta inteira montada, que é justamente o
+   estado base. `prefers-reduced-motion` não a interrompe: ela só perde o
+   movimento pelo `--onboarding-motion`. Ver o comentário no fim do arquivo.
 
    O Figma posiciona em px sobre uma tela de 375, onde o vão do card mede 279px;
    as medidas horizontais viram frações desse vão para acompanhar a largura. */
@@ -12,8 +13,13 @@
   --onboarding-shares-span: calc(100% - (var(--onboarding-shares-inset) * 2));
   /* Mais longo que os outros cards de propósito: aqui são seis beats em
      sequência e o conteúdo é uma conta, que precisa de tempo de leitura. A
-     pausa no quadro cheio vai de 58% a 92%, uns 2,6s. */
+     conta fica inteira montada a partir de 58%. */
   --onboarding-shares-duration: 7.8s;
+
+  /* Onde o ciclo para, em frações dele. As keyframes continuam descrevendo o
+     ciclo inteiro, mas os 8% finais eram só a dissolvência que emendava o
+     loop: em 92% a conta está inteira e é esse quadro que `forwards` mantém. */
+  --onboarding-shares-hold: 0.92;
 
   /* A janela da contagem crescente, em porcento do ciclo. Vive aqui, junto das
      keyframes, porque é o `OnboardingSharePrice` que a lê para escravizar o
@@ -69,7 +75,7 @@
 .onboarding-shares__tag--buy {
   left: var(--onboarding-shares-inset);
   animation: onboarding-shares-buy var(--onboarding-shares-duration) ease-out
-    infinite;
+    var(--onboarding-shares-hold) forwards;
 }
 
 /* No Figma esta pílula está em x=173, que é exatamente onde começa a segunda
@@ -81,7 +87,7 @@
     var(--onboarding-shares-inset) + (var(--onboarding-shares-span) + 2px) / 2
   );
   animation: onboarding-shares-price var(--onboarding-shares-duration) ease-out
-    infinite;
+    var(--onboarding-shares-hold) forwards;
 }
 
 /* `line` (564:7168): duas colunas de largura igual com 2px entre elas, três
@@ -141,12 +147,12 @@
 
 .onboarding-shares__cell--amount {
   animation: onboarding-shares-amount var(--onboarding-shares-duration) ease-out
-    infinite;
+    var(--onboarding-shares-hold) forwards;
 }
 
 .onboarding-shares__cell--unit {
   animation: onboarding-shares-unit var(--onboarding-shares-duration) ease-out
-    infinite;
+    var(--onboarding-shares-hold) forwards;
 }
 
 /* As duas células do retorno entram juntas: é um só beat, o que você recebe. Os
@@ -154,12 +160,12 @@
    quártico do contador de métricas do perfil. */
 .onboarding-shares__cell--payoff {
   animation: onboarding-shares-payoff var(--onboarding-shares-duration) ease-out
-    infinite;
+    var(--onboarding-shares-hold) forwards;
 }
 
 .onboarding-shares__cell--formula {
   animation: onboarding-shares-formula var(--onboarding-shares-duration)
-    ease-out infinite;
+    ease-out var(--onboarding-shares-hold) forwards;
 }
 
 /* `light` (564:7052): igual aos outros cards. */
@@ -177,8 +183,9 @@
 /* A conta se monta em ordem de leitura: a compra, o preço, o valor investido, o
    preço por participação, o retorno, e por último a linha que resume a conta —
    ela fecha o raciocínio, então vem depois de tudo. Cada bloco sobe 4px ao
-   entrar, todos seguram o quadro cheio de 58% a 92% e desaparecem juntos para a
-   virada do loop, então o reinício não tem salto. */
+   entrar e todos seguram o quadro cheio a partir de 58%; a animação para em
+   92%, então os passos de 98% e 100%, que dissolviam tudo para emendar o loop,
+   não são mais alcançados. */
 @keyframes onboarding-shares-buy {
   0%,
   3% {
@@ -313,6 +320,6 @@
 }
 
 /* Sem bloco de `prefers-reduced-motion` aqui de propósito: o movimento sai pelo
-   `--onboarding-motion` do sheet e o loop continua. Com a variável em zero os
-   blocos entram só por opacidade, sem subir os 4px, e a ênfase da pílula `67%`
-   perde a escala. Os números seguem crescendo: é texto mudando. */
+   `--onboarding-motion` do sheet. Com a variável em zero os blocos entram só
+   por opacidade, sem subir os 4px, e a ênfase da pílula `67%` perde a escala.
+   Os números seguem crescendo: é texto mudando. */

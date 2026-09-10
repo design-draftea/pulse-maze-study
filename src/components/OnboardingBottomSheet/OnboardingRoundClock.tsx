@@ -5,8 +5,8 @@ import chartGlow from '../../assets/onboardingChartGlow.svg'
 import './OnboardingRoundClock.css'
 
 const TARGET_PRICE = '$80,195.64'
+const OUTCOME = 'Terminó arriba'
 
-/** Os segundos são iguais nas duas voltas, então a tira é uma só. */
 const COUNTDOWN_SECONDS = ['05', '04', '03', '02', '01', '00']
 
 interface RunStep {
@@ -15,66 +15,37 @@ interface RunStep {
   isUp: boolean
 }
 
-interface Run {
-  id: string
-  outcome: string
-  endsAbove: boolean
-  steps: RunStep[]
-}
-
 /**
- * Duas voltas alternadas: a primeira fecha acima do objetivo, a segunda abaixo,
- * e aí o ciclo recomeça. É o que prova que o resultado não está combinado —
- * uma volta só, sempre terminando acima, faria a rodada parecer decidida de
- * antemão.
+ * A volta que a ilustração percorre, um passo por segundo do relógio. O preço
+ * cruza o objetivo três vezes antes de fechar acima dele: sem isso a rodada
+ * pareceria decidida de antemão.
  *
- * Dentro de cada volta o preço cruza o objetivo três vezes antes de fechar,
- * pelo mesmo motivo. Todos os valores terminam em `.64`, como o objetivo, então
- * a diferença do chip fecha em dólares inteiros, e o último passo da primeira
- * volta cai exatamente no par do Figma: `$80,202.64` e `$7`.
+ * Todos os valores terminam em `.64`, como o objetivo, então a diferença do
+ * chip fecha em dólares inteiros, e o último passo cai exatamente no par do
+ * Figma: `$80,202.64` e `$7`.
  */
-const RUNS: Run[] = [
-  {
-    id: 'above',
-    outcome: 'Terminó arriba',
-    endsAbove: true,
-    steps: [
-      { price: '$80,192.64', delta: '$3', isUp: false },
-      { price: '$80,197.64', delta: '$2', isUp: true },
-      { price: '$80,194.64', delta: '$1', isUp: false },
-      { price: '$80,199.64', delta: '$4', isUp: true },
-      { price: '$80,200.64', delta: '$5', isUp: true },
-      { price: '$80,202.64', delta: '$7', isUp: true },
-    ],
-  },
-  {
-    id: 'below',
-    outcome: 'Terminó abajo',
-    endsAbove: false,
-    steps: [
-      { price: '$80,198.64', delta: '$3', isUp: true },
-      { price: '$80,193.64', delta: '$2', isUp: false },
-      { price: '$80,196.64', delta: '$1', isUp: true },
-      { price: '$80,191.64', delta: '$4', isUp: false },
-      { price: '$80,190.64', delta: '$5', isUp: false },
-      { price: '$80,189.64', delta: '$6', isUp: false },
-    ],
-  },
+const RUN_STEPS: RunStep[] = [
+  { price: '$80,192.64', delta: '$3', isUp: false },
+  { price: '$80,197.64', delta: '$2', isUp: true },
+  { price: '$80,194.64', delta: '$1', isUp: false },
+  { price: '$80,199.64', delta: '$4', isUp: true },
+  { price: '$80,200.64', delta: '$5', isUp: true },
+  { price: '$80,202.64', delta: '$7', isUp: true },
 ]
-
-const runClass = (run: Run) =>
-  `onboarding-clock__run onboarding-clock__run--${run.endsAbove ? 'a' : 'b'}`
 
 /**
  * O `cardAnimado` do segundo passo (`564:6976`). Fora da árvore de
  * acessibilidade pelo mesmo motivo do card 1: o título e o corpo abaixo dela
  * carregam o sentido.
  *
- * O estado base do CSS é o quadro **resolvido da primeira volta** — 00:00,
- * barra fora, `Precio final` e `Terminó arriba`. No card 1 o estado base é o
- * quadro do Figma, mas aqui o do Figma é um instante do meio da contagem. O
- * quadro resolvido é o que carrega a lição, e é ele que fica para quem tem
- * `prefers-reduced-motion`.
+ * O estado base do CSS é o quadro **resolvido** — 00:00, barra cheia,
+ * `Precio final` e `Terminó arriba`. No card 1 o estado base é o quadro do
+ * Figma, mas aqui o do Figma é um instante do meio da contagem, e o quadro
+ * resolvido é o que carrega a lição.
+ *
+ * A volta roda uma vez e para nesse quadro, mantido por `animation-fill-mode`
+ * — o que vale também para quem tem `prefers-reduced-motion`, que aqui só
+ * perde o movimento e não a sequência.
  */
 export function OnboardingRoundClock() {
   return (
@@ -127,19 +98,10 @@ export function OnboardingRoundClock() {
 
         {/* Herda o visual da pílula do card 1: o card 1 já ensinou esse verde
             com `Terminó arriba`, e repetir o mesmo elemento é o que faz os
-            cards lerem como um sistema. O `abajo` usa o vermelho de baixa, a
-            mesma linguagem do DOWN em todo o resto do app. */}
-        {RUNS.map((run) => (
-          <span key={run.id} className={`onboarding-clock__outcome-slot ${runClass(run)}`}>
-            <span
-              className={`onboarding-clock__outcome${
-                run.endsAbove ? '' : ' onboarding-clock__outcome--down'
-              }`}
-            >
-              {run.outcome}
-            </span>
-          </span>
-        ))}
+            cards lerem como um sistema. */}
+        <span className="onboarding-clock__outcome-slot">
+          <span className="onboarding-clock__outcome">{OUTCOME}</span>
+        </span>
 
         <div className="onboarding-clock__prices" data-node-id="570:7224">
           <div className="onboarding-clock__price onboarding-clock__price--target" data-node-id="570:7225">
@@ -158,46 +120,40 @@ export function OnboardingRoundClock() {
                 </span>
               </span>
 
-              <span className="onboarding-clock__runs" data-node-id="570:7232">
-                {RUNS.map((run) => (
-                  <span key={run.id} className={runClass(run)}>
-                    <span className="onboarding-clock__odometer onboarding-clock__odometer--delta">
-                      <span className="onboarding-clock__strip">
-                        {run.steps.map((step, index) => (
-                          <span
-                            key={COUNTDOWN_SECONDS[index]}
-                            className={`onboarding-clock__delta${
-                              step.isUp ? '' : ' onboarding-clock__delta--down'
-                            }`}
-                          >
-                            <img src={step.isUp ? arrowUpGreen : arrowDownRed} alt="" />
-                            {step.delta}
-                          </span>
-                        ))}
-                      </span>
+              <span
+                className="onboarding-clock__odometer onboarding-clock__odometer--delta"
+                data-node-id="570:7232"
+              >
+                <span className="onboarding-clock__strip">
+                  {RUN_STEPS.map((step, index) => (
+                    <span
+                      key={COUNTDOWN_SECONDS[index]}
+                      className={`onboarding-clock__delta${
+                        step.isUp ? '' : ' onboarding-clock__delta--down'
+                      }`}
+                    >
+                      <img src={step.isUp ? arrowUpGreen : arrowDownRed} alt="" />
+                      {step.delta}
                     </span>
-                  </span>
-                ))}
+                  ))}
+                </span>
               </span>
             </div>
 
-            <span className="onboarding-clock__runs" data-node-id="570:7235">
-              {RUNS.map((run) => (
-                <span key={run.id} className={runClass(run)}>
-                  <span className="onboarding-clock__odometer onboarding-clock__odometer--price">
-                    <span className="onboarding-clock__strip">
-                      {run.steps.map((step, index) => (
-                        <span
-                          key={COUNTDOWN_SECONDS[index]}
-                          className="onboarding-clock__price-value"
-                        >
-                          {step.price}
-                        </span>
-                      ))}
-                    </span>
+            <span
+              className="onboarding-clock__odometer onboarding-clock__odometer--price"
+              data-node-id="570:7235"
+            >
+              <span className="onboarding-clock__strip">
+                {RUN_STEPS.map((step, index) => (
+                  <span
+                    key={COUNTDOWN_SECONDS[index]}
+                    className="onboarding-clock__price-value"
+                  >
+                    {step.price}
                   </span>
-                </span>
-              ))}
+                ))}
+              </span>
             </span>
           </div>
         </div>
