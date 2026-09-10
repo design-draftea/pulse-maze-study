@@ -8,7 +8,6 @@ const SHARES = 200
    `participações × preço atual`. Fica aqui porque é o que a pílula mostra, e
    ligado ao mesmo lugar para os dois números não divergirem. */
 const ENTRY_PRICE = 0.67
-const SOLD_HOLD_MS = 2000
 /* Vende sozinho quando a varredura chega ao fim do gráfico, que é onde o valor
    da entrada está no máximo. */
 const AUTO_SELL_PHASE = 0.48
@@ -91,28 +90,17 @@ const readCssNumber = (styles: CSSStyleDeclaration, name: string) =>
  * marcador para, o valor trava e uma linha marca onde no tempo aquilo
  * aconteceu. É o texto do card virando gesto.
  *
- * Passados dois segundos a série é **remontada**, e não retomada de onde parou.
- * Retomar deixava o gráfico voltar a ser traçado depois da venda, como se a
- * posição ainda estivesse aberta — e a volta demorava a fechar. Assim cada
- * volta é uma rodada completa: corre, vende, recomeça.
+ * A rodada acontece uma vez e o card fica no quadro da venda. Recomeçar seria
+ * pedir que a mesma cena fosse assistida de novo enquanto a pessoa lê o texto
+ * ao lado; o quadro parado é o que ela precisa ver. Voltar a este passo, ou
+ * reabrir o onboarding, remonta o card e a rodada roda outra vez.
  */
 export function OnboardingSellEarly() {
   const cardRef = useRef<HTMLDivElement>(null)
   const labelRef = useRef<HTMLSpanElement>(null)
   const amountRef = useRef<HTMLSpanElement>(null)
-  const resetTimerRef = useRef<number | null>(null)
   const saleCentsRef = useRef(0)
-  // `armed` e a fase anterior moram em refs, e não no efeito: o efeito remonta
-  // quando `isSold` volta a `false`, e com variáveis locais ele rearmava com a
-  // fase ainda dentro da janela do gatilho — vendia de novo na hora, num laço
-  // de venda e reset que nunca terminava a volta.
-  const armedRef = useRef(true)
-  const previousPhaseRef = useRef(0)
   const [isSold, setIsSold] = useState(false)
-  // Trocar a `key` da série a remonta, e com ela as animações recomeçam do
-  // zero. É o que faz a volta seguinte ser uma rodada nova em vez de retomar
-  // no meio de uma que já foi vendida.
-  const [cycle, setCycle] = useState(0)
 
   const paint = useCallback((saleCents: number, sold: boolean) => {
     const label = labelRef.current
@@ -136,19 +124,7 @@ export function OnboardingSellEarly() {
 
     paint(saleCentsRef.current, true)
     setIsSold(true)
-
-    resetTimerRef.current = window.setTimeout(() => {
-      card.style.removeProperty('--onboarding-sell-at')
-      armedRef.current = true
-      previousPhaseRef.current = 0
-      setCycle((current) => current + 1)
-      setIsSold(false)
-    }, SOLD_HOLD_MS)
   }, [isSold, paint])
-
-  useEffect(() => () => {
-    if (resetTimerRef.current !== null) window.clearTimeout(resetTimerRef.current)
-  }, [])
 
   useEffect(() => {
     const card = cardRef.current
@@ -192,13 +168,9 @@ export function OnboardingSellEarly() {
       saleCentsRef.current = saleCents
       paint(saleCents, false)
 
-      // Vende sozinho perto do fim da varredura, uma vez por volta. Rearma
-      // apenas quando a fase dá a volta.
-      if (phase < previousPhaseRef.current) armedRef.current = true
-      previousPhaseRef.current = phase
-
-      if (armedRef.current && phase >= AUTO_SELL_PHASE && phase < 0.88) {
-        armedRef.current = false
+      // Vende sozinho perto do fim da varredura. O laço termina aqui: `sell`
+      // liga `isSold`, e o efeito não volta a rodar.
+      if (phase >= AUTO_SELL_PHASE && phase < 0.88) {
         sell()
         return
       }
@@ -208,7 +180,7 @@ export function OnboardingSellEarly() {
 
     frameId = window.requestAnimationFrame(render)
     return () => window.cancelAnimationFrame(frameId)
-  }, [cycle, isSold, paint, sell])
+  }, [isSold, paint, sell])
 
   return (
     <div
@@ -226,7 +198,7 @@ export function OnboardingSellEarly() {
           <span className="onboarding-sell__shares-value">{SHARES}</span>
         </span>
 
-        <OnboardingSeries key={cycle} direction="falling" />
+        <OnboardingSeries direction="falling" />
 
         {/* Marca em que ponto do tempo a venda aconteceu. */}
         <span className="onboarding-sell__moment" aria-hidden="true" />

@@ -155,105 +155,88 @@
   flex-direction: column;
   align-items: center;
   gap: 24px;
-  padding: 16px;
+  /* Sem recuo lateral aqui: ele desceu para os filhos. A trilha precisa da
+     largura inteira do sheet, senão o card sai de cena 16px antes da borda e o
+     arrasto acontece dentro de uma janelinha recuada. Bullets e rodapé repõem
+     os mesmos 16px por conta própria. */
+  padding: 16px 0;
   overflow-x: clip;
   overflow-y: auto;
+
+  /* Arrastar o carrossel a partir de uma imagem — a série do card 1, a moeda do
+     card 2, as setas — vira o arrastar-e-soltar nativo do navegador, e o gesto
+     morre no primeiro movimento. Foi o que aconteceu no teste com ponteiro
+     real, antes da trilha existir; a trilha rola do mesmo jeito, então a trava
+     continua valendo. `user-select` evita a seleção de texto pelo mesmo
+     motivo. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-/* Palco da troca de passo. Mesma linguagem das rotas do `ProfileBottomSheet`:
-   300ms `ease-out` em `transform` e `opacity`, deslizando no sentido da
-   navegação — para a esquerda ao avançar, para a direita ao voltar.
-
-   Uma diferença: lá as rotas são todas absolutas dentro de um palco de altura
-   fixa. Aqui o conteúdo tem altura automática, então **só a camada que sai fica
-   absoluta**; a que entra permanece no fluxo e é ela que define a altura do
-   sheet. Se algum passo futuro tiver corpo com número diferente de linhas, a
-   altura vai saltar no início da transição — hoje os quatro têm duas linhas. */
-.onboarding-sheet__stage {
-  position: relative;
-  display: block;
-  width: 100%;
+.onboarding-sheet__content img {
+  -webkit-user-drag: none;
 }
 
-.onboarding-sheet__step {
+/* O carrossel dos passos. Mesmo mecanismo do `PreviousRounds`: rolagem
+   horizontal nativa com encaixe. O navegador cuida do arrasto, da inércia e do
+   encaixe, então o gesto vale igual no toque e no trackpad e não há código de
+   gesto para manter.
+
+   Ele substituiu a troca por dissolvência que existia aqui. Com ela, o card
+   antigo apagava no lugar enquanto o novo acendia deslocado em 24%, e a pessoa
+   usuária não percebia que tinha trocado de card — o conteúdo precisa
+   atravessar a tela para a troca ser lida como troca.
+
+   Uma consequência boa: os quatro passos coexistem, então a trilha mede o mais
+   alto dos quatro e a altura do sheet não muda mais de um passo para o outro. */
+.onboarding-sheet__track {
   display: flex;
   width: 100%;
+  gap: 16px;
+
+  /* O recuo do conteúdo vive na trilha, e `scroll-padding-inline` faz o encaixe
+     considerá-lo: sem ele, `scroll-snap-align: start` encostaria o card na
+     borda do sheet e comeria a margem. É a mesma composição do
+     `PreviousRounds`. */
+  padding-inline: 16px;
+  scroll-padding-inline: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+
+  /* O gesto horizontal numa página que não rola na horizontal vira navegação
+     no histórico do navegador no macOS; aqui a trilha rola, e `contain` é o que
+     impede o encadeamento de sobrar para o histórico. */
+  overscroll-behavior-x: contain;
+}
+
+.onboarding-sheet__track::-webkit-scrollbar {
+  display: none;
+}
+
+.onboarding-sheet__slide {
+  display: flex;
+  width: 100%;
+  flex: 0 0 100%;
   flex-direction: column;
   gap: 24px;
+  scroll-snap-align: start;
 }
 
-.onboarding-sheet__step--leaving-forward,
-.onboarding-sheet__step--leaving-back {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-}
+/* O passo vizinho é montado para não entrar vazio durante o arrasto, mas a
+   ilustração dele fica no primeiro quadro até chegar a vez: a animação de cada
+   card roda uma vez só, e deixá-la correr fora da tela entregaria o card já
+   resolvido a quem ainda nem chegou nele.
 
-/* O deslocamento é multiplicado por `--onboarding-motion`: com a preferência de
-   movimento ligada sobra a opacidade, e a troca vira uma dissolvência. */
-.onboarding-sheet__step--entering-forward {
-  animation: onboarding-step-enter-forward 300ms ease-out both;
-}
-
-.onboarding-sheet__step--entering-back {
-  animation: onboarding-step-enter-back 300ms ease-out both;
-}
-
-.onboarding-sheet__step--leaving-forward {
-  animation: onboarding-step-leave-forward 300ms ease-out both;
-}
-
-.onboarding-sheet__step--leaving-back {
-  animation: onboarding-step-leave-back 300ms ease-out both;
-}
-
-@keyframes onboarding-step-enter-forward {
-  from {
-    opacity: 0;
-    transform: translate3d(calc(24% * var(--onboarding-motion)), 0, 0);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes onboarding-step-enter-back {
-  from {
-    opacity: 0;
-    transform: translate3d(calc(-24% * var(--onboarding-motion)), 0, 0);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes onboarding-step-leave-forward {
-  from {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translate3d(calc(-24% * var(--onboarding-motion)), 0, 0);
-  }
-}
-
-@keyframes onboarding-step-leave-back {
-  from {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translate3d(calc(24% * var(--onboarding-motion)), 0, 0);
-  }
+   `paused` no quadro zero não é um card vazio: é o estado inicial de cada
+   ilustração, com a caixa, os rótulos e a escolha apagada já no lugar. */
+.onboarding-sheet__slide[data-active='false'] *,
+.onboarding-sheet__slide[data-active='false']::before,
+.onboarding-sheet__slide[data-active='false']::after {
+  animation-play-state: paused;
 }
 
 .onboarding-sheet__step-title {
@@ -280,6 +263,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
+  padding-inline: 16px;
 }
 
 .onboarding-sheet__bullet {
@@ -306,6 +290,7 @@
   width: 100%;
   align-items: flex-start;
   gap: 8px;
+  padding-inline: 16px;
 }
 
 /* Só ícone. No Figma o rótulo deste botão está `hidden`, e o `label` que sobra

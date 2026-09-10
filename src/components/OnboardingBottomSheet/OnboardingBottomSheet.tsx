@@ -5,6 +5,7 @@ import {
   useState,
   type CSSProperties,
   type ReactNode,
+  type UIEvent as ReactUIEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
 import closeIcon from '../../assets/iconClose.svg'
@@ -17,11 +18,10 @@ import { ONBOARDING_STEP_TOTAL, onboardingSteps } from './onboardingSteps'
 import './OnboardingBottomSheet.css'
 
 const SHEET_MOTION_MS = 300
-const STEP_MOTION_MS = 300
 const SHEET_TITLE = 'Cómo funciona Draftea Pulse'
 const CLOSE_LABEL = 'Cerrar'
 const BACK_LABEL = 'Volver'
-const illustrationByStepId: Record<string, () => ReactNode> = {
+const illustrationByStepId: Partial<Record<string, () => ReactNode>> = {
   choice: OnboardingChart,
   round: OnboardingRoundClock,
   price: OnboardingSharePrice,
@@ -77,33 +77,54 @@ export function OnboardingBottomSheet({
   const [shouldRender, setShouldRender] = useState(isOpen)
   const [isClosing, setIsClosing] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
-  // O passo que está saindo e a direção da troca. Só existem durante os 300ms
-  // da transição: fora dela apenas o passo atual é montado, para não deixar
-  // quatro ilustrações animando ao mesmo tempo.
-  const [leavingStep, setLeavingStep] = useState<number | null>(null)
-  const [direction, setDirection] = useState<'forward' | 'back'>('forward')
-  const stepTimerRef = useRef<number | null>(null)
   const isClosingRef = useRef(false)
   const closeTimerRef = useRef<number | null>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const sheetRef = useRef<HTMLElement | null>(null)
+  const trackRef = useRef<HTMLDivElement | null>(null)
 
-  // Os efeitos colaterais ficam fora do updater do `setStepIndex` de propósito:
-  // o React pode invocar um updater mais de uma vez, e agendar temporizador
-  // dentro dele dispararia a limpeza da transição antes da hora.
-  const goToStep = useCallback((next: number, way: 'forward' | 'back') => {
-    if (next === stepIndex) return
+  /**
+   * A trilha é um carrossel de rolagem nativa com encaixe, o mesmo mecanismo do
+   * `PreviousRounds`. Quem arrasta, encaixa e dá inércia é o navegador — e por
+   * isso o gesto funciona igual no toque e no trackpad, sem custo de código, e
+   * a rolagem vertical do sheet continua com ele.
+   *
+   * `behavior` fica de fora de propósito: sem ele a rolagem programada obedece
+   * ao `scroll-behavior` do CSS, que a preferência de movimento reduzido
+   * desliga junto com o resto.
+   */
+  const scrollToStep = useCallback((next: number) => {
+    const track = trackRef.current
+    const first = track?.children[0]
+    const slide = track?.children[next]
 
-    setLeavingStep(stepIndex)
-    setDirection(way)
-    setStepIndex(next)
+    if (!track || !(first instanceof HTMLElement) || !(slide instanceof HTMLElement)) {
+      return
+    }
 
-    if (stepTimerRef.current !== null) window.clearTimeout(stepTimerRef.current)
-    stepTimerRef.current = window.setTimeout(
-      () => setLeavingStep(null),
-      STEP_MOTION_MS,
-    )
-  }, [stepIndex])
+    // A origem é o primeiro slide, e não a trilha: o recuo lateral dela entra
+    // nos dois `offsetLeft` e se cancela, então a conta não depende dele.
+    track.scrollTo({ left: slide.offsetLeft - first.offsetLeft })
+  }, [])
+
+  const handleTrackScroll = useCallback((event: ReactUIEvent<HTMLDivElement>) => {
+    const track = event.currentTarget
+    const [first, second] = track.children
+
+    if (!(first instanceof HTMLElement)) return
+
+    // O passo é medido no layout, e não repetido a partir do `gap` do CSS: são
+    // duas fontes para o mesmo número, e a que vale é a que está na tela.
+    const stride = second instanceof HTMLElement
+      ? second.offsetLeft - first.offsetLeft
+      : first.offsetWidth
+
+    if (stride <= 0) return
+
+    const next = Math.round(track.scrollLeft / stride)
+
+    setStepIndex(Math.max(0, Math.min(onboardingSteps.length - 1, next)))
+  }, [])
 
   const clearCloseTimer = useCallback(() => {
     if (closeTimerRef.current === null) return
@@ -146,8 +167,10 @@ export function OnboardingBottomSheet({
       // O onboarding tem quatro passos e a entrada é um botão de ajuda, então
       // reabrir sempre recomeça no primeiro card em vez de retomar no meio.
       setStepIndex(0)
-      setLeavingStep(null)
       focusFrame = window.requestAnimationFrame(() => {
+        // A trilha guarda a própria posição de rolagem, então voltar ao
+        // primeiro passo é levá-la de volta ao começo.
+        if (trackRef.current) trackRef.current.scrollLeft = 0
         sheetRef.current?.focus({ preventScroll: true })
       })
     }, 0)
@@ -164,10 +187,7 @@ export function OnboardingBottomSheet({
     return () => window.cancelAnimationFrame(closeFrame)
   }, [isOpen, requestClose, shouldRender])
 
-  useEffect(() => () => {
-    clearCloseTimer()
-    if (stepTimerRef.current !== null) window.clearTimeout(stepTimerRef.current)
-  }, [clearCloseTimer])
+  useEffect(() => () => clearCloseTimer(), [clearCloseTimer])
 
   useEffect(() => {
     if (!shouldRender) return undefined
@@ -181,16 +201,12 @@ export function OnboardingBottomSheet({
   }, [requestClose, shouldRender])
 
   const step = onboardingSteps[stepIndex]
-  const Illustration = step ? illustrationByStepId[step.id] : undefined
-  const leaving = leavingStep === null ? undefined : onboardingSteps[leavingStep]
-  const LeavingIllustration = leaving ? illustrationByStepId[leaving.id] : undefined
-  const isMoving = leavingStep !== null
   const isLastAuthoredStep = stepIndex === onboardingSteps.length - 1
   const isLastPlannedStep = stepIndex === ONBOARDING_STEP_TOTAL - 1
 
   const handleBack = useCallback(() => {
-    if (stepIndex > 0) goToStep(stepIndex - 1, 'back')
-  }, [goToStep, stepIndex])
+    if (stepIndex > 0) scrollToStep(stepIndex - 1)
+  }, [scrollToStep, stepIndex])
 
   const handleAdvance = useCallback(() => {
     if (isLastAuthoredStep) {
@@ -199,8 +215,8 @@ export function OnboardingBottomSheet({
       return
     }
 
-    goToStep(stepIndex + 1, 'forward')
-  }, [goToStep, isLastAuthoredStep, onComplete, requestClose, stepIndex])
+    scrollToStep(stepIndex + 1)
+  }, [isLastAuthoredStep, onComplete, requestClose, scrollToStep, stepIndex])
 
   if (!shouldRender || !step) return null
 
@@ -245,32 +261,36 @@ export function OnboardingBottomSheet({
         </header>
 
         <div className="onboarding-sheet__content" data-node-id="564:6610">
-          <div className="onboarding-sheet__stage">
-            {leaving && (
-              <div
-                className={`onboarding-sheet__step onboarding-sheet__step--leaving-${direction}`}
-                aria-hidden="true"
-              >
-                {LeavingIllustration ? <LeavingIllustration /> : null}
-                <h3 className="onboarding-sheet__step-title">{leaving.title}</h3>
-                <p className="onboarding-sheet__step-body">{leaving.body}</p>
-              </div>
-            )}
+          <div
+            ref={trackRef}
+            className="onboarding-sheet__track"
+            onScroll={handleTrackScroll}
+          >
+            {onboardingSteps.map((slide, index) => {
+              const Illustration = illustrationByStepId[slide.id]
+              // A ilustração do vizinho já vem montada, senão o card entraria
+              // vazio no meio do arrasto. Quem a segura no primeiro quadro até
+              // a chegada é o `animation-play-state` do CSS, preso a
+              // `data-active`.
+              const isNear = Math.abs(index - stepIndex) <= 1
 
-            <div
-              className={`onboarding-sheet__step${
-                isMoving ? ` onboarding-sheet__step--entering-${direction}` : ''
-              }`}
-            >
-              {Illustration ? <Illustration /> : null}
+              return (
+                <div
+                  key={slide.id}
+                  className="onboarding-sheet__slide"
+                  data-active={index === stepIndex}
+                >
+                  {Illustration && isNear ? <Illustration /> : null}
 
-              <h3 className="onboarding-sheet__step-title" data-node-id="564:6611">
-                {step.title}
-              </h3>
-              <p className="onboarding-sheet__step-body" data-node-id="564:6612">
-                {step.body}
-              </p>
-            </div>
+                  <h3 className="onboarding-sheet__step-title" data-node-id="564:6611">
+                    {slide.title}
+                  </h3>
+                  <p className="onboarding-sheet__step-body" data-node-id="564:6612">
+                    {slide.body}
+                  </p>
+                </div>
+              )
+            })}
           </div>
 
           <div
